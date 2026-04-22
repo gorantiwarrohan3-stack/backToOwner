@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">BackToOwner</string>
+    <!-- Full URI scheme: appwrite-callback- plus your Appwrite project ID (same as AppwriteConfig.PROJECT_ID). -->
+    <string name="appwrite_oauth_scheme" translatable="false">appwrite-callback-69c6f8fe001ea120b91e</string>
+</resources>

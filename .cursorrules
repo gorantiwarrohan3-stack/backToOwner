@@ -1,0 +1,35 @@
+# BackToOwner Project Rules (Appwrite Version)
+
+## Tech Stack & Architecture
+- Language: Kotlin (Jetpack Compose)
+- Backend: Appwrite (Auth, Databases, Storage, Functions)
+- AI: MLKit (On-device), Gemini API (via Appwrite Function)
+- Maps: Google Maps Compose Library
+- Architecture: MVVM + Hilt Dependency Injection
+
+## Appwrite Implementation Details
+- **Auth**: Use `account.createEmailSession`. Restrict registration to `@wpi.edu` domains in the UI and via Appwrite Console.
+- **Database**: Use Appwrite 'Databases'. Create a collection for `posts` and another for `matches`.
+- **Storage**: Use Appwrite 'Storage' for item images. Store the `fileId` in the database document.
+- **Functions**: Use an Appwrite Function (Node.js or Python) to handle the Gemini API calls for matching to keep the API key secure.
+
+## Feature-Specific Logic (Difficulty Points)
+1. **MLKit Tagging**: 
+   - Use `ImageLabeling.getClient`. 
+   - Whitelist: "Phone", "Wallet", "Keys", "Bottle", "ID Card", "Glasses", "Bag".
+   - UI: Show labels as clickable Chips after photo capture to auto-fill the 'Category' field.
+
+2. **Gemini Matching**:
+   - Trigger: When a LOST post is created, call the Appwrite Function.
+   - Logic: Compare the new post against the last 20 FOUND posts. 
+   - Output: Return a JSON with `confidenceScore` (0-100) and `matchReason`.
+
+3. **Maps & Geofencing**:
+   - Markers: Red (Lost), Green (Found).
+   - Safe Zones: Gordon Library (42.2742, -71.8064), Campus Police (42.2750, -71.8058).
+   - Alert: Use `GeofencingClient` to trigger a local notification when entering a Safe Zone.
+
+## UI Requirements (WPI Theme)
+- Colors: Crimson (#A90028) and Grey (#A8ADB0).
+- Components: Material3.
+- Screens: Login, Unified Feed, Map, Create Post (with CameraX), AI Match Details, Profile.
