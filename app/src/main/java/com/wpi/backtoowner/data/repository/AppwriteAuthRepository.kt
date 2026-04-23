@@ -20,8 +20,11 @@ class AppwriteAuthRepository @Inject constructor(
 
     override suspend fun login(email: String, password: String): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            requireWpiEmail(email)
-            account.createEmailPasswordSession(email, password)
+            val normalized = email.trim().lowercase()
+            requireWpiEmail(normalized)
+            // Switching accounts: Appwrite rejects a new session if "current" still exists.
+            runCatching { account.deleteSession("current") }
+            account.createEmailPasswordSession(normalized, password)
             Unit
         }
     }
