@@ -1,7 +1,13 @@
-# Copy to `appwrite.properties` in this folder (same directory as settings.gradle.kts).
-# The real `appwrite.properties` file is gitignored — do not commit it.
+# =============================================================================
+# Optional: template if you fork this repo and use your own Appwrite project
+# =============================================================================
 #
-# Appwrite Console → Settings / Databases / Storage
+# This repository includes a committed `appwrite.properties` so teammates can
+# build without a separate handoff. For a private fork, replace values below
+# (Console → Settings / Databases / Storage) and keep Android platform:
+#   com.wpi.backtoowner
+#
+# Endpoint must match your project's region (e.g. fra.cloud.appwrite.io).
 
 appwrite.endpoint=https://fra.cloud.appwrite.io/v1
 appwrite.projectId=

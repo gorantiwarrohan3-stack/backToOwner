@@ -3,8 +3,8 @@ package com.wpi.backtoowner.config
 import com.wpi.backtoowner.BuildConfig
 
 /**
- * Appwrite settings. Fill in root **`appwrite.properties`** (copy from **`appwrite.properties.example`**).
- * That file is gitignored; never commit real IDs or keys.
+ * Appwrite settings from root **`appwrite.properties`** (Gradle → [BuildConfig]).
+ * This repo may commit that file for shared class builds; forks can use **`appwrite.properties.example`**.
  *
  * **Collections:** `posts`, `messages`, `user_profiles` — attributes and permissions per your Appwrite Console setup.
  */

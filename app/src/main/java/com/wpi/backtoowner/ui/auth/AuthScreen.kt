@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.wpi.backtoowner.config.AppwriteConfig
 import com.wpi.backtoowner.ui.theme.WpiCrimson
 import com.wpi.backtoowner.ui.theme.WpiHeaderMaroon
 import com.wpi.backtoowner.ui.theme.WpiOnCrimson
@@ -54,6 +55,7 @@ fun AuthScreen(
     var confirm by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
+    val appwriteConfigured = AppwriteConfig.PROJECT_ID.isNotBlank()
 
     Column(
         modifier = modifier
@@ -136,6 +138,26 @@ fun AuthScreen(
 
         Spacer(Modifier.height(20.dp))
 
+        if (!appwriteConfigured) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFFFF3E0),
+            ) {
+                Text(
+                    text = "Appwrite is not configured on this build. Ensure appwrite.properties " +
+                        "exists in the project root with appwrite.projectId set (clone the repo to get " +
+                        "the team file, or copy appwrite.properties.example, fill IDs, then rebuild).",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF5D4037),
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -190,6 +212,10 @@ fun AuthScreen(
             Button(
                 onClick = {
                     error = null
+                    if (!appwriteConfigured) {
+                        error = "Add appwrite.properties and rebuild. See the yellow notice above."
+                        return@Button
+                    }
                     if (!WpiEmailPattern.matches(email.trim())) {
                         error = "Email must be a valid @wpi.edu address."
                         return@Button
@@ -220,7 +246,7 @@ fun AuthScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                enabled = !busy,
+                enabled = !busy && appwriteConfigured,
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = WpiHeaderMaroon,

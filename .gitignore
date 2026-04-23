@@ -17,9 +17,6 @@ captures/
 *.kotlin_module
 .kotlin/
 
-# Appwrite / app secrets (never commit real values)
-appwrite.properties
-
 # Environment & keys
 .env
 .env.*
