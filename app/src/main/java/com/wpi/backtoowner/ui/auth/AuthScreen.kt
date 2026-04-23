@@ -223,9 +223,10 @@ fun AuthScreen(
                 enabled = !busy,
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF9E9E9E),
-                    contentColor = Color.White,
-                    disabledContainerColor = Color(0xFFBDBDBD),
+                    containerColor = WpiHeaderMaroon,
+                    contentColor = WpiOnCrimson,
+                    disabledContainerColor = WpiHeaderMaroon.copy(alpha = 0.45f),
+                    disabledContentColor = WpiOnCrimson.copy(alpha = 0.75f),
                 ),
             ) {
                 Text(if (tab == 0) "Login" else "Sign Up", fontWeight = FontWeight.SemiBold)

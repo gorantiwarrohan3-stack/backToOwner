@@ -30,6 +30,6 @@
    - Alert: Use `GeofencingClient` to trigger a local notification when entering a Safe Zone.
 
 ## UI Requirements (WPI Theme)
-- Colors: Crimson (#A90028) and Grey (#A8ADB0).
+- Colors: WPI Pantone 187c (#AC2B37), accent #C41230, black (#000000) — see `ui/theme/Color.kt`.
 - Components: Material3.
 - Screens: Login, Unified Feed, Map, Create Post (with CameraX), AI Match Details, Profile.

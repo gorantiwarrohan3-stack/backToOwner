@@ -130,6 +130,38 @@ class AppwritePostRepository @Inject constructor(
         }
         }
     }
+
+    override suspend fun deletePost(documentId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            databases.deleteDocument(
+                databaseId = requireDb(),
+                collectionId = AppwriteConfig.COLLECTION_POSTS,
+                documentId = documentId,
+            )
+            Unit
+        }
+    }
+}
+
+private fun parsePostType(raw: String): PostType {
+    val normalized = raw.trim().uppercase()
+    return when (normalized) {
+        PostType.FOUND.name -> PostType.FOUND
+        PostType.LOST.name -> PostType.LOST
+        else -> runCatching { PostType.valueOf(raw.trim()) }.getOrElse { PostType.LOST }
+    }
+}
+
+private fun normalizeImageUrl(raw: String?): String {
+    val value = raw?.trim().orEmpty()
+    if (value.isBlank()) return ""
+    if (value.startsWith("http://") || value.startsWith("https://")) return value
+    // Backward compatibility: some earlier rows may have stored only the Appwrite fileId.
+    val base = AppwriteConfig.ENDPOINT.trimEnd('/')
+    val bucket = AppwriteConfig.STORAGE_BUCKET_ID.trim()
+    val project = AppwriteConfig.PROJECT_ID.trim()
+    if (bucket.isBlank() || project.isBlank()) return ""
+    return "${base}/storage/buckets/${bucket}/files/${value}/view?project=${project}"
 }
 
 /** Appwrite returns this until `posterUserId` / `posterDisplayName` exist on the collection. */
@@ -152,7 +184,11 @@ private fun isUnknownPosterAttributeError(e: Throwable): Boolean {
 private fun Document<*>.toPost(): Post? {
     val map = data as? Map<String, Any?> ?: return null
     fun str(key: String) = map[key]?.toString()?.takeIf { it.isNotBlank() }
-    fun dbl(key: String) = (map[key] as? Number)?.toDouble()
+    fun dbl(key: String): Double? = when (val v = map[key]) {
+        is Number -> v.toDouble()
+        is String -> v.trim().replace(",", ".").toDoubleOrNull()
+        else -> null
+    }
     fun intOrNull(key: String) = (map[key] as? Number)?.toInt()
     fun boolResolved(): Boolean = when (val v = map[FIELD_RESOLVED]) {
         null -> false
@@ -164,11 +200,15 @@ private fun Document<*>.toPost(): Post? {
 
     val title = str(FIELD_TITLE) ?: return null
     val description = (str(fieldDescription) ?: str("description") ?: str("decription")).orEmpty()
-    val imageUrl = str(FIELD_IMAGE_URL).orEmpty()
+    val imageUrl = normalizeImageUrl(
+        str(FIELD_IMAGE_URL)
+            ?: str("imageUrl")
+            ?: str("imageId"),
+    )
     val latitude = dbl(FIELD_LATITUDE) ?: return null
     val longitude = dbl(FIELD_LONGITUDE) ?: return null
     val typeRaw = str(FIELD_TYPE) ?: return null
-    val type = runCatching { PostType.valueOf(typeRaw) }.getOrElse { PostType.LOST }
+    val type = parsePostType(typeRaw)
     val matchPercent = intOrNull(FIELD_MATCH_PERCENT)
     val createdMs = parseCreatedAt(createdAt)
 

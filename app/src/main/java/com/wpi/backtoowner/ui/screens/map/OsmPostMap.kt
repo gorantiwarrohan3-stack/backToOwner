@@ -8,10 +8,7 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toArgb
@@ -30,6 +27,26 @@ import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
+
+/** Spread markers that share the same coordinates so pins are not drawn on top of one another. */
+private fun markerPositions(posts: List<Post>): List<Pair<Post, GeoPoint>> {
+    val byKey = posts.groupBy { "${it.latitude},${it.longitude}" }
+    return posts.map { post ->
+        val group = byKey["${post.latitude},${post.longitude}"]!!
+        if (group.size <= 1) {
+            return@map post to GeoPoint(post.latitude, post.longitude)
+        }
+        val idx = group.indexOf(post).coerceAtLeast(0)
+        val radius = 0.00015
+        val angle = 2 * PI * idx / group.size
+        val dLat = radius * sin(angle)
+        val dLon = radius * cos(angle)
+        post to GeoPoint(post.latitude + dLat, post.longitude + dLon)
+    }
+}
 
 private fun pinDrawable(context: Context, colorArgb: Int): BitmapDrawable {
     val d = context.resources.displayMetrics.density
@@ -60,15 +77,23 @@ private fun zoomMapToPosts(mapView: MapView, posts: List<Post>) {
             mapView.controller.setCenter(GeoPoint(p.latitude, p.longitude))
         }
         else -> {
-            val pts = ArrayList(posts.map { GeoPoint(it.latitude, it.longitude) })
-            runCatching {
-                val box = BoundingBox.fromGeoPoints(pts)
-                mapView.zoomToBoundingBox(box, true, 96)
-            }.onFailure {
-                val midLat = posts.map { it.latitude }.average()
-                val midLon = posts.map { it.longitude }.average()
-                mapView.controller.setZoom(14.0)
-                mapView.controller.setCenter(GeoPoint(midLat, midLon))
+            val distinctKeys = posts.map { "${it.latitude},${it.longitude}" }.distinct()
+            if (distinctKeys.size == 1) {
+                val p = posts.first()
+                mapView.controller.setZoom(15.5)
+                mapView.controller.setCenter(GeoPoint(p.latitude, p.longitude))
+            } else {
+                val pts = ArrayList(posts.map { GeoPoint(it.latitude, it.longitude) })
+                runCatching {
+                    val box = BoundingBox.fromGeoPoints(pts)
+                    // `animate = false` avoids long main-thread animation overlapping gestures (ANR risk).
+                    mapView.zoomToBoundingBox(box, false, 96)
+                }.onFailure {
+                    val midLat = posts.map { it.latitude }.average()
+                    val midLon = posts.map { it.longitude }.average()
+                    mapView.controller.setZoom(14.0)
+                    mapView.controller.setCenter(GeoPoint(midLat, midLon))
+                }
             }
         }
     }
@@ -80,9 +105,9 @@ private fun syncPostMarkers(mapView: MapView, posts: List<Post>, context: Contex
         mapView.overlays.removeAll(markers.toSet())
         val lostArgb = WpiLostPin.toArgb()
         val foundArgb = WpiFoundPin.toArgb()
-        for (post in posts) {
+        for ((post, geo) in markerPositions(posts)) {
             val m = Marker(mapView).apply {
-                position = GeoPoint(post.latitude, post.longitude)
+                position = geo
                 title = post.title
                 snippet = if (post.type == PostType.LOST) "Lost" else "Found"
                 icon = pinDrawable(
@@ -113,8 +138,8 @@ fun OsmPostMap(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    /** Only re-run marker + zoom when feed data actually changes (stable order so polling does not reshuffle). */
-    var lastSyncedPostKey by remember { mutableStateOf<String?>(null) }
+    /** Holder avoids [mutableStateOf] writes inside [AndroidView] `update`, which can re-enter composition and destabilize the map. */
+    val postSyncKeyHolder = remember { object { var lastKey: String? = null } }
 
     DisposableEffect(lifecycleOwner, mapHolder) {
         val observer = LifecycleEventObserver { _, event ->
@@ -165,9 +190,14 @@ fun OsmPostMap(
                 .joinToString(separator = "|") { p ->
                     "${p.id},${p.latitude},${p.longitude},${p.type},${p.title}"
                 }
-            if (postKey != lastSyncedPostKey) {
-                lastSyncedPostKey = postKey
-                syncPostMarkers(mapView, posts, context)
+            if (postKey != postSyncKeyHolder.lastKey) {
+                postSyncKeyHolder.lastKey = postKey
+                val postsSnapshot = posts.toList()
+                mapView.post {
+                    if (mapHolder[0] === mapView) {
+                        syncPostMarkers(mapView, postsSnapshot, context)
+                    }
+                }
             }
         },
     )

@@ -57,7 +57,39 @@ class AppwriteAuthRepository @Inject constructor(
                 id = user.id,
                 name = user.name.ifBlank { user.email.substringBefore("@") },
                 email = user.email,
+                phone = user.phone,
             )
+        }
+    }
+
+    override suspend fun updateProfile(
+        name: String,
+        email: String,
+        phone: String,
+        password: String?,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val user = account.get()
+            val trimmedName = name.trim()
+            val trimmedEmail = email.trim().lowercase()
+            val trimmedPhone = phone.trim()
+            if (trimmedName.isNotBlank() && trimmedName != user.name) {
+                account.updateName(trimmedName)
+            }
+            val emailChanged = trimmedEmail != user.email.lowercase()
+            val phoneChanged = trimmedPhone != user.phone
+            if (emailChanged || phoneChanged) {
+                val pwd = password?.takeIf { it.isNotBlank() }
+                    ?: error("Enter your current password to change email or phone.")
+                if (emailChanged) {
+                    requireWpiEmail(trimmedEmail)
+                    account.updateEmail(trimmedEmail, pwd)
+                }
+                if (phoneChanged) {
+                    account.updatePhone(trimmedPhone, pwd)
+                }
+            }
+            Unit
         }
     }
 

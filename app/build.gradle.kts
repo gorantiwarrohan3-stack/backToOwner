@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,15 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
 }
+
+private val appwriteProperties =
+    Properties().apply {
+        val f = rootProject.file("appwrite.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+
+private fun appwriteProp(key: String, default: String = ""): String =
+    (appwriteProperties.getProperty(key, default) ?: default).trim()
 
 android {
     namespace = "com.wpi.backtoowner"
@@ -16,6 +27,22 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+
+        val projectId = appwriteProp("appwrite.projectId")
+        buildConfigField(
+            "String",
+            "APPWRITE_ENDPOINT",
+            "\"${appwriteProp("appwrite.endpoint", "https://fra.cloud.appwrite.io/v1")}\"",
+        )
+        buildConfigField("String", "APPWRITE_PROJECT_ID", "\"$projectId\"")
+        buildConfigField("String", "APPWRITE_DATABASE_ID", "\"${appwriteProp("appwrite.databaseId")}\"")
+        buildConfigField(
+            "String",
+            "APPWRITE_STORAGE_BUCKET_ID",
+            "\"${appwriteProp("appwrite.storageBucketId")}\"",
+        )
+        manifestPlaceholders["appwriteOAuthScheme"] =
+            if (projectId.isEmpty()) "appwrite-callback-UNSET" else "appwrite-callback-$projectId"
     }
 
     buildTypes {
@@ -39,6 +66,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

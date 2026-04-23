@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wpi.backtoowner.ui.components.BrandAppHeaderTitleRow
 import com.wpi.backtoowner.ui.theme.WpiHeaderMaroon
 import com.wpi.backtoowner.ui.theme.WpiOnCrimson
 
@@ -63,6 +64,8 @@ fun ChatScreen(
     val currentUserLabel by viewModel.currentUserLabel.collectAsStateWithLifecycle()
     val otherPartyLabel by viewModel.otherPartyLabel.collectAsStateWithLifecycle()
     val messages by viewModel.messages.collectAsStateWithLifecycle()
+    val sendError by viewModel.sendError.collectAsStateWithLifecycle()
+    val isSending by viewModel.isSending.collectAsStateWithLifecycle()
 
     var draft by remember { mutableStateOf("") }
 
@@ -81,24 +84,12 @@ fun ChatScreen(
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text("W", color = WpiHeaderMaroon, fontWeight = FontWeight.Bold)
-                            }
-                            Spacer(Modifier.size(8.dp))
-                            Text(
-                                text = "WPI BackToOwner",
-                                color = Color.White,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 17.sp,
-                            )
-                        }
+                        BrandAppHeaderTitleRow(
+                            modifier = Modifier.weight(1f),
+                            logoHeight = 36.dp,
+                            titleFontSize = 22.sp,
+                            spacerWidth = 8.dp,
+                        )
                     }
                 }
                 Surface(
@@ -162,6 +153,7 @@ fun ChatScreen(
                         ),
                     )
                     IconButton(
+                        enabled = !isSending,
                         onClick = {
                             if (draft.isNotBlank()) {
                                 viewModel.sendMessage(draft)
@@ -169,8 +161,20 @@ fun ChatScreen(
                             }
                         },
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = WpiHeaderMaroon)
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Send",
+                            tint = if (isSending) Color.Gray else WpiHeaderMaroon,
+                        )
                     }
+                }
+                sendError?.let { msg ->
+                    Text(
+                        text = msg,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFFFB4AB),
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
                 }
             }
         },
@@ -235,7 +239,7 @@ fun ChatScreen(
                             )
                         }
                     }
-                    itemsIndexed(messages, key = { i, m -> "$i-${m.body}" }) { _, msg ->
+                    itemsIndexed(messages, key = { _, m -> m.id }) { _, msg ->
                         ChatBubbleRow(msg)
                     }
                 }

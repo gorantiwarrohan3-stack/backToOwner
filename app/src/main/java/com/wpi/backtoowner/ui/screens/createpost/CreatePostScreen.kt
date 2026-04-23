@@ -61,6 +61,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wpi.backtoowner.domain.model.PostType
 import com.wpi.backtoowner.ui.theme.WpiHeaderMaroon
 import com.wpi.backtoowner.ui.theme.WpiOnCrimson
+import com.wpi.backtoowner.ui.util.categoryIconForItemTitle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -154,7 +155,12 @@ fun CreatePostScreen(
                             viewModel.submitPost(onPostSuccess)
                         },
                         enabled = canPost,
-                        colors = ButtonDefaults.buttonColors(containerColor = WpiHeaderMaroon, contentColor = WpiOnCrimson),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = WpiHeaderMaroon,
+                            contentColor = WpiOnCrimson,
+                            disabledContainerColor = WpiHeaderMaroon.copy(alpha = 0.45f),
+                            disabledContentColor = WpiOnCrimson.copy(alpha = 0.75f),
+                        ),
                         shape = RoundedCornerShape(20.dp),
                     ) {
                         Text("Post")
@@ -185,11 +191,19 @@ fun CreatePostScreen(
                     .background(Color(0xFFEEEEEE)),
                 contentAlignment = Alignment.Center,
             ) {
-                previewBitmap?.let { bmp ->
+                val bmp = previewBitmap
+                if (bmp != null) {
                     Image(
                         bitmap = bmp.asImageBitmap(),
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Icon(
+                        imageVector = categoryIconForItemTitle(category.ifBlank { "Item" }),
+                        contentDescription = category.ifBlank { "Item category" },
+                        modifier = Modifier.size(120.dp),
+                        tint = WpiHeaderMaroon.copy(alpha = 0.45f),
                     )
                 }
                 IconButton(
@@ -395,9 +409,14 @@ fun CreatePostScreen(
                     .height(52.dp),
                 enabled = canPost,
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9E9E9E)),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = WpiHeaderMaroon,
+                    contentColor = WpiOnCrimson,
+                    disabledContainerColor = WpiHeaderMaroon.copy(alpha = 0.45f),
+                    disabledContentColor = WpiOnCrimson.copy(alpha = 0.75f),
+                ),
             ) {
-                Text(if (isPosting) "Posting…" else "Post to feed", color = Color.White)
+                Text(if (isPosting) "Posting…" else "Post to feed")
             }
             Spacer(Modifier.height(80.dp))
         }

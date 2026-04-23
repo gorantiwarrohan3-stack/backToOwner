@@ -12,6 +12,30 @@ captures/
 .externalNativeBuild/
 .cxx/
 
-# Kotlin
+# Kotlin / KSP
 *.class
 *.kotlin_module
+.kotlin/
+
+# Appwrite / app secrets (never commit real values)
+appwrite.properties
+
+# Environment & keys
+.env
+.env.*
+*.pem
+*.p12
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+
+# Fastlane (if added later)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Profiling / logs
+*.hprof
+*.log

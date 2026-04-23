@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.wpi.backtoowner.ui.util.categoryIconForItemTitle
 import com.wpi.backtoowner.domain.model.AiMatchCandidate
 import com.wpi.backtoowner.domain.model.Post
 import com.wpi.backtoowner.domain.model.PostType
@@ -266,7 +267,15 @@ private fun DetailBody(
                             .height(200.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFFE0E0E0)),
-                    )
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = categoryIconForItemTitle(post.title),
+                            contentDescription = post.title,
+                            modifier = Modifier.size(88.dp),
+                            tint = WpiHeaderMaroon.copy(alpha = 0.9f),
+                        )
+                    }
                 }
             }
         }
@@ -371,7 +380,12 @@ private fun MatchCard(match: AiMatchCandidate) {
                     .background(Color(0xFF2A2A2A)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("No photo", color = Color(0xFF9E9E9E), style = MaterialTheme.typography.labelSmall)
+                Icon(
+                    imageVector = categoryIconForItemTitle(match.label),
+                    contentDescription = match.label,
+                    modifier = Modifier.size(40.dp),
+                    tint = Color(0xFFB8B8B8),
+                )
             }
         }
         Spacer(Modifier.height(8.dp))

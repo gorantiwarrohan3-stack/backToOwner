@@ -1,0 +1,9 @@
+# Copy to `appwrite.properties` in this folder (same directory as settings.gradle.kts).
+# The real `appwrite.properties` file is gitignored — do not commit it.
+#
+# Appwrite Console → Settings / Databases / Storage
+
+appwrite.endpoint=https://fra.cloud.appwrite.io/v1
+appwrite.projectId=
+appwrite.databaseId=
+appwrite.storageBucketId=

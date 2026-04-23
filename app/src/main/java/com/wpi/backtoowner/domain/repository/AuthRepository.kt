@@ -15,4 +15,15 @@ interface AuthRepository {
 
     /** Current account from Appwrite (requires active session). */
     suspend fun getCurrentUser(): Result<AuthUserSummary>
+
+    /**
+     * Updates the signed-in account. [password] is required when [email] or [phone] differs from the server;
+     * display name can be updated without a password.
+     */
+    suspend fun updateProfile(
+        name: String,
+        email: String,
+        phone: String,
+        password: String?,
+    ): Result<Unit>
 }

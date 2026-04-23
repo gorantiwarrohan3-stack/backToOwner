@@ -13,4 +13,6 @@ interface PostRepository {
     fun observePosts(): Flow<Result<List<Post>>>
 
     suspend fun createPost(newPost: NewPost): Result<String>
+
+    suspend fun deletePost(documentId: String): Result<Unit>
 }

@@ -17,8 +17,8 @@ sealed interface ProfileUiState {
     data object Loading : ProfileUiState
     data class Ready(
         val user: AuthUserSummary,
-        val myActivePosts: List<Post>,
-        val myResolvedPosts: List<Post>,
+        /** All listings authored by this user (newest first). */
+        val myPosts: List<Post>,
         val postsLoadFailed: Boolean,
     ) : ProfileUiState
     data class Error(val message: String) : ProfileUiState
@@ -47,12 +47,10 @@ class ProfileViewModel @Inject constructor(
                     val posts = postsResult.getOrElse { emptyList() }
                     val postsFailed = postsResult.isFailure
                     val mine = posts.filter { it.posterUserId != null && it.posterUserId == user.id }
-                    val active = mine.filter { !it.resolved }.sortedByDescending { it.createdAtEpochMs }
-                    val resolved = mine.filter { it.resolved }.sortedByDescending { it.createdAtEpochMs }
+                    val myPosts = mine.sortedByDescending { it.createdAtEpochMs }
                     _uiState.value = ProfileUiState.Ready(
                         user = user,
-                        myActivePosts = active,
-                        myResolvedPosts = resolved,
+                        myPosts = myPosts,
                         postsLoadFailed = postsFailed,
                     )
                 },
@@ -60,6 +58,48 @@ class ProfileViewModel @Inject constructor(
                     _uiState.value = ProfileUiState.Error(e.message ?: "Could not load profile.")
                 },
             )
+        }
+    }
+
+    fun saveProfile(
+        name: String,
+        email: String,
+        phone: String,
+        password: String,
+        onResult: (Result<Unit>) -> Unit,
+    ) {
+        viewModelScope.launch {
+            val res = authRepository.updateProfile(
+                name = name,
+                email = email,
+                phone = phone,
+                password = password.ifBlank { null },
+            )
+            if (res.isSuccess) {
+                authRepository.getCurrentUser().fold(
+                    onSuccess = { u ->
+                        val cur = _uiState.value
+                        if (cur is ProfileUiState.Ready) {
+                            _uiState.value = cur.copy(user = u)
+                        }
+                    },
+                    onFailure = { },
+                )
+            }
+            onResult(res)
+        }
+    }
+
+    fun deletePost(postId: String, onResult: (Result<Unit>) -> Unit) {
+        viewModelScope.launch {
+            val res = postRepository.deletePost(postId)
+            if (res.isSuccess) {
+                val cur = _uiState.value
+                if (cur is ProfileUiState.Ready) {
+                    _uiState.value = cur.copy(myPosts = cur.myPosts.filterNot { it.id == postId })
+                }
+            }
+            onResult(res)
         }
     }
 }
