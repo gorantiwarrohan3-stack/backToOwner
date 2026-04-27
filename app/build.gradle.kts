@@ -41,6 +41,11 @@ android {
             "APPWRITE_STORAGE_BUCKET_ID",
             "\"${appwriteProp("appwrite.storageBucketId")}\"",
         )
+        buildConfigField(
+            "String",
+            "GEMINI_API_KEY",
+            "\"${appwriteProp("gemini.apiKey")}\"",
+        )
         manifestPlaceholders["appwriteOAuthScheme"] =
             if (projectId.isEmpty()) "appwrite-callback-UNSET" else "appwrite-callback-$projectId"
     }
