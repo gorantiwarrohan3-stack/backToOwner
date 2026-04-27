@@ -15,7 +15,7 @@ coilCompose = "2.7.0"
 playServicesLocation = "21.3.0"
 appwriteAndroid = "8.1.0"
 osmdroid = "6.1.20"
-generativeai = "0.9.0"
+google-genai = "1.46.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -40,7 +40,7 @@ kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "ko
 mlkit-image-labeling = { group = "com.google.mlkit", name = "image-labeling", version.ref = "mlkitImageLabeling" }
 appwrite-android = { group = "io.appwrite", name = "sdk-for-android", version.ref = "appwriteAndroid" }
 osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
-google-generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "generativeai" }
+google-genai = { group = "com.google.genai", name = "google-genai", version.ref = "google-genai" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

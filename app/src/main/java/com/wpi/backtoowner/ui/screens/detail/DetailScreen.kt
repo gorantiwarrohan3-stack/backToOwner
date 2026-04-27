@@ -61,6 +61,7 @@ import com.wpi.backtoowner.domain.model.PostType
 import com.wpi.backtoowner.ui.theme.WpiHeaderMaroon
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.text.TextStyle
 import com.wpi.backtoowner.ui.theme.WpiMatchGreen
@@ -389,10 +390,11 @@ fun AiMatchDialog(
                     label = { Text("Your lost item description") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                    colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = WpiHeaderMaroon,
                         focusedLabelColor = WpiHeaderMaroon,
-                        containerColor = Color.White,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
                         unfocusedBorderColor = Color.Gray,
                         unfocusedLabelColor = Color.Gray
                     ),
