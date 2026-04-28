@@ -28,6 +28,10 @@
             </intent-filter>
         </activity>
 
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${mapsApiKey}" />
+
         <!-- Required for Appwrite OAuth (Google, GitHub, etc.). Safe to keep if you only use email/password. -->
         <activity
             android:name="io.appwrite.views.CallbackActivity"
