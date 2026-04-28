@@ -1,6 +1,6 @@
 package com.wpi.backtoowner.di
 
-import com.wpi.backtoowner.data.mlkit.TfliteImageLabelingAnalyzer
+import com.wpi.backtoowner.data.mlkit.MlKitImageLabelingAnalyzer
 import com.wpi.backtoowner.domain.analysis.ImageLabelingAnalyzer
 import dagger.Binds
 import dagger.Module
@@ -14,5 +14,5 @@ abstract class ImageLabelingAnalyzerModule {
 
     @Binds
     @Singleton
-    abstract fun bindImageLabelingAnalyzer(impl: TfliteImageLabelingAnalyzer): ImageLabelingAnalyzer
+    abstract fun bindImageLabelingAnalyzer(impl: MlKitImageLabelingAnalyzer): ImageLabelingAnalyzer
 }
