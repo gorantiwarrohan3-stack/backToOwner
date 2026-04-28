@@ -15,22 +15,28 @@ import com.wpi.backtoowner.domain.repository.PostRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
-class FindLostMatchesUseCase @Inject constructor(
+class FindMatchesUseCase @Inject constructor(
     private val postRepository: PostRepository,
     private val aiMatchingRepository: AiMatchingRepository,
     private val imageLoader: ImageLoader,
     @ApplicationContext private val context: Context
 ) {
-    suspend operator fun invoke(lostPost: Post): List<MatchResult> {
-        // 1. Get all FOUND posts
-        val foundPosts = postRepository.getPosts().getOrElse { emptyList() }
-            .filter { it.type == PostType.FOUND && it.id != lostPost.id }
-            .take(15) // Batch limit for Gemini 2.5 Flash
+    /**
+     * Finds items of the OPPOSITE type that match the given [anchorPost].
+     * (e.g. if anchor is LOST, it finds matching FOUND items).
+     */
+    suspend operator fun invoke(anchorPost: Post): List<MatchResult> {
+        val oppositeType = if (anchorPost.type == PostType.LOST) PostType.FOUND else PostType.LOST
+        
+        // 1. Get items of the opposite type
+        val candidatePosts = postRepository.getPosts().getOrElse { emptyList() }
+            .filter { it.type == oppositeType && it.id != anchorPost.id }
+            .take(15)
 
-        if (foundPosts.isEmpty()) return emptyList()
+        if (candidatePosts.isEmpty()) return emptyList()
 
         // 2. Prepare candidates (fetch Bitmaps)
-        val candidates = foundPosts.map { post ->
+        val candidates = candidatePosts.map { post ->
             MatchCandidate(
                 id = post.id,
                 description = post.description,
@@ -39,7 +45,7 @@ class FindLostMatchesUseCase @Inject constructor(
         }
 
         // 3. Match using AI
-        return aiMatchingRepository.findBestMatches(lostPost.description, candidates)
+        return aiMatchingRepository.findBestMatches(anchorPost.description, candidates)
     }
 
     private suspend fun fetchBitmap(url: String): Bitmap? {

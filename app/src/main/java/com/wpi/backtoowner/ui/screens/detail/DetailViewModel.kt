@@ -7,7 +7,7 @@ import com.wpi.backtoowner.domain.model.Post
 import com.wpi.backtoowner.domain.model.PostType
 import com.wpi.backtoowner.data.local.ChatThreadStore
 import com.wpi.backtoowner.domain.repository.PostRepository
-import com.wpi.backtoowner.domain.usecase.FindLostMatchesUseCase
+import com.wpi.backtoowner.domain.usecase.FindMatchesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,7 +69,7 @@ private fun buildSuggestedMatches(anchor: Post, others: List<Post>): List<AiMatc
 class DetailViewModel @Inject constructor(
     private val postRepository: PostRepository,
     private val chatThreadStore: ChatThreadStore,
-    private val findLostMatchesUseCase: FindLostMatchesUseCase
+    private val findMatchesUseCase: FindMatchesUseCase
 ) : ViewModel() {
 
     private val _post = MutableStateFlow<Post?>(null)
@@ -87,24 +87,27 @@ class DetailViewModel @Inject constructor(
             postRepository.getPost(itemId).fold(
                 onSuccess = { p ->
                     _post.value = p
-                    if (p.type == PostType.LOST) {
-                        // Use AI for Lost posts to find matching Found items
-                        val aiMatches = findLostMatchesUseCase(p)
-                        val allPosts = postRepository.getPosts().getOrElse { emptyList() }
-                        _matches.value = aiMatches.mapNotNull { result ->
-                            allPosts.find { it.id == result.id }?.let { other ->
-                                AiMatchCandidate(
-                                    id = other.id,
-                                    label = "Found: ${other.title}",
-                                    matchPercent = result.confidenceScore,
-                                    imageUrl = other.imageUrl,
-                                )
-                            }
-                        }.sortedByDescending { it.matchPercent }
+                    
+                    // Use AI matching for both Lost and Found posts
+                    val aiMatches = findMatchesUseCase(p)
+                    val allPosts = postRepository.getPosts().getOrElse { emptyList() }
+                    val suggestedMatches = aiMatches.mapNotNull { result ->
+                        allPosts.find { it.id == result.id }?.let { other ->
+                            AiMatchCandidate(
+                                id = other.id,
+                                label = if (other.type == PostType.LOST) "Lost: ${other.title}" else "Found: ${other.title}",
+                                matchPercent = result.confidenceScore,
+                                imageUrl = other.imageUrl,
+                            )
+                        }
+                    }.sortedByDescending { it.matchPercent }
+
+                    // Combine with text matching if AI results are few (optional fallback)
+                    if (suggestedMatches.size < 3) {
+                        val textMatches = buildSuggestedMatches(p, allPosts)
+                        _matches.value = (suggestedMatches + textMatches).distinctBy { it.id }.take(10)
                     } else {
-                        // Use text matching for Found posts to find matching Lost items
-                        val others = postRepository.getPosts().getOrElse { emptyList() }
-                        _matches.value = buildSuggestedMatches(p, others)
+                        _matches.value = suggestedMatches
                     }
                 },
                 onFailure = { e ->

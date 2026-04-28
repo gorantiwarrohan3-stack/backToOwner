@@ -50,11 +50,12 @@ class GeminiAiMatchingRepository @Inject constructor(
         if (candidates.isEmpty()) return@withContext emptyList()
 
         val prompt = StringBuilder().apply {
-            append("I have a lost item described as: \"$lostDescription\"\n\n")
-            append("Please compare this with the following list of found items and tell me which ones match. ")
-            append("For each item, provide a confidence score from 0 to 100 and a short reason.\n\n")
+            append("I have an item described as: \"$lostDescription\"\n\n")
+            append("Please compare this with the following list of candidate items and tell me which ones are likely the same object. ")
+            append("The items in the list might be the 'Found' version of this 'Lost' item, or vice versa.\n")
+            append("For each item, provide a confidence score from 0 to 100 (where 100 is definitely the same object) and a short reason.\n\n")
             append("Return the results as a JSON array of objects with fields: \"id\" (String), \"score\" (Integer), and \"reason\" (String).\n\n")
-            candidates.forEachIndexed { index, candidate ->
+            candidates.forEach { candidate ->
                 append("Item ID: ${candidate.id}\n")
                 append("Description: ${candidate.description}\n")
                 if (candidate.image != null) {

@@ -141,6 +141,8 @@ class AppwritePostRepository @Inject constructor(
                 data = mapOf(FIELD_MATCH_PERCENT to matchPercent)
             )
             Unit
+        }.onFailure {
+            android.util.Log.e("AppwritePostRepository", "Failed to update matchPercent for post $postId: ${it.message}")
         }
     }
 
@@ -202,7 +204,14 @@ private fun Document<*>.toPost(): Post? {
         is String -> v.trim().replace(",", ".").toDoubleOrNull()
         else -> null
     }
-    fun intOrNull(key: String) = (map[key] as? Number)?.toInt()
+    fun intOrNull(key: String): Int? {
+        val v = map[key]
+        return when (v) {
+            is Number -> v.toInt()
+            is String -> v.toIntOrNull()
+            else -> null
+        }
+    }
     fun boolResolved(): Boolean = when (val v = map[FIELD_RESOLVED]) {
         null -> false
         is Boolean -> v
