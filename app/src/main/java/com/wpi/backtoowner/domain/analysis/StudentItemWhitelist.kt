@@ -29,16 +29,21 @@ object StudentItemWhitelist {
             t.contains("water bottle") || (t.contains("bottle") && t.contains("water")) -> "Water Bottle"
             t.contains("bottle") && !t.contains("baby") -> "Water Bottle"
             t.contains("eyewear") || t.contains("eyeglass") || t.contains("sunglass") ||
-                t.contains("goggle") || (t.contains("glass") && (t.contains("eye") || t.contains("wear"))) -> "Eyewear"
+                t.contains("spectacle") || t.contains("goggle") ||
+                (t.contains("glass") && (t.contains("eye") || t.contains("wear"))) -> "Eyewear"
             t.contains("id card") || t.contains("identification card") || t.contains("student id") ||
                 (t.contains("driver") && t.contains("license")) ||
                 (t.contains("badge") && t.contains("id")) -> "ID Card"
             t.contains("identification") && (t.contains("card") || t.contains("document")) -> "ID Card"
             t.contains("mouse") || t.contains("trackpad") || t.contains("touchpad") ||
                 t.contains("magic mouse") -> "Electronics"
+            // Map keyboard-instrument labels to Electronics before the plain "keyboard" catch,
+            // so MLKit's "Musical keyboard" / "Keyboard instrument" never leaks into raw fallback.
+            t.contains("keyboard instrument") || t.contains("musical keyboard") -> "Electronics"
             t.contains("keyboard") -> "Electronics"
             t.contains("monitor") || t.contains("display") || t.contains("webcam") ||
                 t.contains("dslr") -> "Electronics"
+            t.contains("headset") || t.contains("speaker") -> "Electronics"
             t.contains("electronic") || t.contains("laptop") || t.contains("computer") ||
                 t.contains("phone") || t.contains("mobile phone") || t.contains("tablet") ||
                 t.contains("ipad") || t.contains("airpods") || t.contains("earbuds") ||
