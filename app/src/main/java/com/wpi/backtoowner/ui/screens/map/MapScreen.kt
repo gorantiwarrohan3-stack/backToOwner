@@ -54,9 +54,11 @@ import com.wpi.backtoowner.ui.components.BrandAppHeaderTitleRow
 import com.wpi.backtoowner.ui.theme.WpiFoundPin
 import com.wpi.backtoowner.ui.theme.WpiHeaderMaroon
 import com.wpi.backtoowner.ui.theme.WpiLostPin
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.launch
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapView
 
 private val MapFieldOnLight = Color(0xFF1A1A1A)
 private val MapFieldMuted = Color(0xFF5C5C5C)
@@ -101,7 +103,9 @@ fun MapScreen(
         }
     }
 
-    val mapHolder = remember { arrayOfNulls<MapView>(1) }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(LatLng(42.2742, -71.8064), 14.5f)
+    }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -201,9 +205,9 @@ fun MapScreen(
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 88.dp),
         ) {
-            OsmPostMap(
+            GooglePostMap(
                 posts = filteredPosts,
-                mapHolder = mapHolder,
+                cameraPositionState = cameraPositionState,
                 modifier = Modifier.fillMaxSize(),
             )
 
@@ -237,7 +241,9 @@ fun MapScreen(
                                 scope.launch {
                                     val loc = viewModel.lastKnownLocation() ?: return@launch
                                     runCatching {
-                                        mapHolder[0]?.controller?.animateTo(GeoPoint(loc.first, loc.second))
+                                        cameraPositionState.animate(
+                                            CameraUpdateFactory.newLatLng(LatLng(loc.first, loc.second)),
+                                        )
                                     }
                                 }
                             }
@@ -264,7 +270,7 @@ fun MapScreen(
                 LegendRow(color = WpiFoundPin, label = "Found")
                 LegendRow(color = Color(0xFFFFC107), label = "Safe Zone: Library Desk")
                 Text(
-                    "© OpenStreetMap contributors",
+                    "© Google Maps",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color(0xFF888888),
                     modifier = Modifier.padding(top = 6.dp),
