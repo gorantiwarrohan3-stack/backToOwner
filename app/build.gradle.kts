@@ -17,7 +17,6 @@ private val appwriteProperties =
 private fun appwriteProp(key: String, default: String = ""): String =
     (appwriteProperties.getProperty(key, default) ?: default).trim()
 
-
 android {
     namespace = "com.wpi.backtoowner"
     compileSdk = 35
@@ -41,6 +40,11 @@ android {
             "String",
             "APPWRITE_STORAGE_BUCKET_ID",
             "\"${appwriteProp("appwrite.storageBucketId")}\"",
+        )
+        buildConfigField(
+            "String",
+            "GEMINI_API_KEY",
+            "\"${appwriteProp("gemini.apiKey")}\"",
         )
         manifestPlaceholders["appwriteOAuthScheme"] =
             if (projectId.isEmpty()) "appwrite-callback-UNSET" else "appwrite-callback-$projectId"
@@ -69,6 +73,14 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/DEPENDENCIES"
+        }
     }
 
     androidResources {
@@ -105,4 +117,5 @@ dependencies {
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.google.genai)
 }

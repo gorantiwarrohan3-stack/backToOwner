@@ -14,6 +14,8 @@ mlkitImageLabeling = "17.0.9"
 coilCompose = "2.7.0"
 playServicesLocation = "21.3.0"
 appwriteAndroid = "8.1.0"
+osmdroid = "6.1.20"
+google-genai = "1.46.0"
 mapsCompose = "4.3.3"
 playServicesMaps = "19.0.0"
 tensorflowLite = "2.14.0"
@@ -40,6 +42,8 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutinesPlayServices" }
 mlkit-image-labeling = { group = "com.google.mlkit", name = "image-labeling", version.ref = "mlkitImageLabeling" }
 appwrite-android = { group = "io.appwrite", name = "sdk-for-android", version.ref = "appwriteAndroid" }
+osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
+google-genai = { group = "com.google.genai", name = "google-genai", version.ref = "google-genai" }
 maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }
 play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
 tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tensorflowLite" }
