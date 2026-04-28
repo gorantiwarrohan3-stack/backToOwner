@@ -61,6 +61,7 @@ fun ChatScreen(
 ) {
     val post by viewModel.post.collectAsStateWithLifecycle()
     val loadError by viewModel.loadError.collectAsStateWithLifecycle()
+    val messagesLoadError by viewModel.messagesLoadError.collectAsStateWithLifecycle()
     val currentUserLabel by viewModel.currentUserLabel.collectAsStateWithLifecycle()
     val otherPartyLabel by viewModel.otherPartyLabel.collectAsStateWithLifecycle()
     val messages by viewModel.messages.collectAsStateWithLifecycle()
@@ -211,6 +212,14 @@ fun ChatScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item {
+                        messagesLoadError?.let { err ->
+                            Text(
+                                text = err,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFFFB4AB),
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            )
+                        }
                         Text(
                             text = "Listing: ${post?.title.orEmpty()}",
                             style = MaterialTheme.typography.titleSmall,

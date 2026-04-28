@@ -50,6 +50,10 @@ class ChatViewModel @Inject constructor(
     private val _loadError = MutableStateFlow<String?>(null)
     val loadError: StateFlow<String?> = _loadError.asStateFlow()
 
+    /** List/query failures (permissions, indexes); post may still load. */
+    private val _messagesLoadError = MutableStateFlow<String?>(null)
+    val messagesLoadError: StateFlow<String?> = _messagesLoadError.asStateFlow()
+
     private val _currentUserLabel = MutableStateFlow<String?>(null)
     val currentUserLabel: StateFlow<String?> = _currentUserLabel.asStateFlow()
 
@@ -132,9 +136,12 @@ class ChatViewModel @Inject constructor(
             }
         }
         result.fold(
-            onSuccess = { _messages.value = it },
+            onSuccess = {
+                _messages.value = it
+                _messagesLoadError.value = null
+            },
             onFailure = { e ->
-                _loadError.value = e.message ?: "Could not load messages."
+                _messagesLoadError.value = e.message ?: "Could not load messages."
             },
         )
         // Keep local thread list warm so Chats tab has entries.
@@ -186,7 +193,13 @@ class ChatViewModel @Inject constructor(
             }
             _isSending.value = false
             created.fold(
-                onSuccess = { loadMessages() },
+                onSuccess = {
+                    loadMessages()
+                    if (_messagesLoadError.value != null) {
+                        _sendError.value =
+                            "Message may have been saved but could not refresh the list: ${_messagesLoadError.value}"
+                    }
+                },
                 onFailure = { e ->
                     _sendError.value = e.message ?: "Could not send message."
                 },
