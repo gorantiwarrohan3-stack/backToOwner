@@ -107,8 +107,6 @@ fun GooglePostMap(
 ) {
     val context = LocalContext.current
     val markerItems = remember(posts) { markerPositions(posts) }
-    val lostIcon = remember(context) { pinDescriptor(context, WpiLostPin.toArgb()) }
-    val foundIcon = remember(context) { pinDescriptor(context, WpiFoundPin.toArgb()) }
 
     LaunchedEffect(posts) {
         zoomCameraToPosts(cameraPositionState, posts)
@@ -123,6 +121,11 @@ fun GooglePostMap(
             compassEnabled = false,
         ),
     ) {
+        // BitmapDescriptorFactory requires Maps SDK to be initialized — must be called
+        // inside the GoogleMap content lambda, never during outer composition.
+        val lostIcon = remember(context) { pinDescriptor(context, WpiLostPin.toArgb()) }
+        val foundIcon = remember(context) { pinDescriptor(context, WpiFoundPin.toArgb()) }
+
         markerItems.forEach { (post, latLng) ->
             Marker(
                 state = MarkerState(position = latLng),
