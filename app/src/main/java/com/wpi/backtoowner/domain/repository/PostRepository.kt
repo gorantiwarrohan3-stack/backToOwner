@@ -14,5 +14,7 @@ interface PostRepository {
 
     suspend fun createPost(newPost: NewPost): Result<String>
 
+    suspend fun updatePostMatchPercent(postId: String, matchPercent: Int): Result<Unit>
+
     suspend fun deletePost(documentId: String): Result<Unit>
 }

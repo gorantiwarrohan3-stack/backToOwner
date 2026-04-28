@@ -83,6 +83,7 @@ class AppwritePostRepository @Inject constructor(
     }.flowOn(Dispatchers.IO)
 
     override suspend fun createPost(newPost: NewPost): Result<String> = withContext(Dispatchers.IO) {
+        // ... (existing implementation) ...
         runCatching {
         val poster = account.get()
         val posterLabel = poster.name.trim().ifBlank {
@@ -128,6 +129,18 @@ class AppwritePostRepository @Inject constructor(
                 throw e
             }
         }
+        }
+    }
+
+    override suspend fun updatePostMatchPercent(postId: String, matchPercent: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            databases.updateDocument(
+                databaseId = requireDb(),
+                collectionId = AppwriteConfig.COLLECTION_POSTS,
+                documentId = postId,
+                data = mapOf(FIELD_MATCH_PERCENT to matchPercent)
+            )
+            Unit
         }
     }
 

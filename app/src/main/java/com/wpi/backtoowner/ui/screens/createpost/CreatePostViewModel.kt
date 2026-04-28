@@ -11,6 +11,7 @@ import com.wpi.backtoowner.domain.model.PostType
 import com.wpi.backtoowner.data.local.FoundLocationDraft
 import com.wpi.backtoowner.domain.repository.PostImageRepository
 import com.wpi.backtoowner.domain.repository.PostRepository
+import com.wpi.backtoowner.domain.usecase.FindLostMatchesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,7 @@ class CreatePostViewModel @Inject constructor(
     private val postImageRepository: PostImageRepository,
     private val fusedLocationClient: FusedLocationProviderClient,
     private val foundLocationDraft: FoundLocationDraft,
+    private val findLostMatchesUseCase: FindLostMatchesUseCase
 ) : ViewModel() {
 
     /** Address typed on the Map tab; prepended to Found posts when non-blank. */
@@ -215,9 +217,24 @@ class CreatePostViewModel @Inject constructor(
             )
             _isPosting.value = false
             result.fold(
-                onSuccess = {
+                onSuccess = { postId ->
                     _manualPlaceNote.value = ""
                     if (type == PostType.FOUND) foundLocationDraft.clear()
+
+                    // Trigger AI matching in background if it's a LOST post
+                    if (type == PostType.LOST) {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            val lostPost = postRepository.getPost(postId).getOrNull()
+                            if (lostPost != null) {
+                                val matches = findLostMatchesUseCase(lostPost)
+                                val bestMatch = matches.maxByOrNull { it.confidenceScore }
+                                if (bestMatch != null && bestMatch.confidenceScore >= 40) {
+                                    postRepository.updatePostMatchPercent(postId, bestMatch.confidenceScore)
+                                }
+                            }
+                        }
+                    }
+
                     onSuccess()
                 },
                 onFailure = { e ->
