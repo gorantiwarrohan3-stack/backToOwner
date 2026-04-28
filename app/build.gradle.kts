@@ -17,6 +17,15 @@ private val appwriteProperties =
 private fun appwriteProp(key: String, default: String = ""): String =
     (appwriteProperties.getProperty(key, default) ?: default).trim()
 
+private val localProperties =
+    Properties().apply {
+        val f = rootProject.file("local.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+
+private fun localProp(key: String, default: String = ""): String =
+    (localProperties.getProperty(key, default) ?: default).trim()
+
 android {
     namespace = "com.wpi.backtoowner"
     compileSdk = 35
@@ -48,6 +57,7 @@ android {
         )
         manifestPlaceholders["appwriteOAuthScheme"] =
             if (projectId.isEmpty()) "appwrite-callback-UNSET" else "appwrite-callback-$projectId"
+        manifestPlaceholders["mapsApiKey"] = localProp("MAPS_API_KEY")
     }
 
     buildTypes {
@@ -81,6 +91,10 @@ android {
             excludes += "META-INF/DEPENDENCIES"
         }
     }
+
+    androidResources {
+        noCompress += "tflite"
+    }
 }
 
 dependencies {
@@ -106,7 +120,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.mlkit.image.labeling)
     implementation(libs.appwrite.android)
-    implementation(libs.osmdroid.android)
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.maps)
+    implementation(libs.tensorflow.lite)
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)

@@ -16,6 +16,9 @@ playServicesLocation = "21.3.0"
 appwriteAndroid = "8.1.0"
 osmdroid = "6.1.20"
 google-genai = "1.46.0"
+mapsCompose = "4.3.3"
+playServicesMaps = "19.0.0"
+tensorflowLite = "2.14.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -41,6 +44,9 @@ mlkit-image-labeling = { group = "com.google.mlkit", name = "image-labeling", ve
 appwrite-android = { group = "io.appwrite", name = "sdk-for-android", version.ref = "appwriteAndroid" }
 osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 google-genai = { group = "com.google.genai", name = "google-genai", version.ref = "google-genai" }
+maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }
+play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
+tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tensorflowLite" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
