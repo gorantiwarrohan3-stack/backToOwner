@@ -17,6 +17,15 @@ private val appwriteProperties =
 private fun appwriteProp(key: String, default: String = ""): String =
     (appwriteProperties.getProperty(key, default) ?: default).trim()
 
+private val secretsProperties =
+    Properties().apply {
+        val f = rootProject.file("secrets.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+
+private fun secretsProp(key: String, default: String = ""): String =
+    (secretsProperties.getProperty(key, default) ?: default).trim()
+
 
 android {
     namespace = "com.wpi.backtoowner"
@@ -44,7 +53,8 @@ android {
         )
         manifestPlaceholders["appwriteOAuthScheme"] =
             if (projectId.isEmpty()) "appwrite-callback-UNSET" else "appwrite-callback-$projectId"
-        manifestPlaceholders["mapsApiKey"] = appwriteProp("maps.apiKey")
+        manifestPlaceholders["mapsApiKey"] = secretsProp("maps.apiKey")
+        buildConfigField("String", "GEMINI_API_KEY", "\"${secretsProp("gemini.apiKey")}\"")
     }
 
     buildTypes {
