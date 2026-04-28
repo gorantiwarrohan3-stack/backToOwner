@@ -43,8 +43,19 @@ class MlKitImageLabelingAnalyzer @Inject constructor(
             val rawFallback = labels
                 .asSequence()
                 .sortedByDescending { it.confidence }
-                .filter { it.confidence >= 0.42f }
+                .filter { it.confidence >= 0.55f }
                 .filter { it.text.isNotBlank() }
+                .filter { label ->
+                    // When the whitelist already identified a category, suppress generic/misleading
+                    // raw labels that MLKit commonly returns alongside physical objects
+                    // (e.g. "Musical instrument", "Organism", "Geological phenomenon").
+                    if (whitelistMerged.isNotEmpty()) {
+                        val lc = label.text.lowercase()
+                        !lc.contains("instrument") && !lc.contains("musical") &&
+                            !lc.contains("organism") && !lc.contains("geological") &&
+                            !lc.contains("astronomical") && !lc.contains("phenomenon")
+                    } else true
+                }
                 .map { label ->
                     val raw = label.text.trim()
                     val title = raw.replaceFirstChar { ch ->
