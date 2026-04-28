@@ -7,6 +7,10 @@ import com.wpi.backtoowner.BuildConfig
  * This repo may commit that file for shared class builds; forks can use **`appwrite.properties.example`**.
  *
  * **Collections:** `posts`, `messages`, `user_profiles` — attributes and permissions per your Appwrite Console setup.
+ *
+ * **`messages`:** string attributes `itemId`, `senderUserId`, `senderName`, `senderRole`, `body`.
+ * Add a **key/index** on `itemId` if list/query by item fails. Collection needs **Create** (and **Read**) for **Users**
+ * (or rules you intend). Storage bucket must allow **Read** for image URLs to load in the app.
  */
 object AppwriteConfig {
 
