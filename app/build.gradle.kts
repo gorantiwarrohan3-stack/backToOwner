@@ -17,14 +17,6 @@ private val appwriteProperties =
 private fun appwriteProp(key: String, default: String = ""): String =
     (appwriteProperties.getProperty(key, default) ?: default).trim()
 
-private val localProperties =
-    Properties().apply {
-        val f = rootProject.file("local.properties")
-        if (f.exists()) f.inputStream().use { load(it) }
-    }
-
-private fun localProp(key: String, default: String = ""): String =
-    (localProperties.getProperty(key, default) ?: default).trim()
 
 android {
     namespace = "com.wpi.backtoowner"
@@ -52,7 +44,7 @@ android {
         )
         manifestPlaceholders["appwriteOAuthScheme"] =
             if (projectId.isEmpty()) "appwrite-callback-UNSET" else "appwrite-callback-$projectId"
-        manifestPlaceholders["mapsApiKey"] = localProp("MAPS_API_KEY")
+        manifestPlaceholders["mapsApiKey"] = appwriteProp("maps.apiKey")
     }
 
     buildTypes {
