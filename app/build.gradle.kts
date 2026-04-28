@@ -111,6 +111,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.mlkit.image.labeling)
     implementation(libs.appwrite.android)
+    implementation(libs.osmdroid.android)
     implementation(libs.maps.compose)
     implementation(libs.play.services.maps)
     implementation(libs.tensorflow.lite)
