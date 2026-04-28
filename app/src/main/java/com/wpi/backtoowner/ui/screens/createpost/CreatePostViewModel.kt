@@ -228,7 +228,7 @@ class CreatePostViewModel @Inject constructor(
                             if (lostPost != null) {
                                 val matches = findLostMatchesUseCase(lostPost)
                                 val bestMatch = matches.maxByOrNull { it.confidenceScore }
-                                if (bestMatch != null && bestMatch.confidenceScore >= 40) {
+                                if (bestMatch != null && bestMatch.confidenceScore > 0) {
                                     postRepository.updatePostMatchPercent(postId, bestMatch.confidenceScore)
                                 }
                             }

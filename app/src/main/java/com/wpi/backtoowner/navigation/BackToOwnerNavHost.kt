@@ -65,6 +65,9 @@ fun BackToOwnerNavHost(
             DetailScreen(
                 itemId = itemId,
                 onBack = { navController.popBackStack() },
+                onNavigateToDetail = { newId ->
+                    navController.navigate(Screen.Detail.createRoute(newId))
+                },
                 onMessageFounder = {
                     navController.navigate(Screen.Chat.createRoute(itemId))
                 },

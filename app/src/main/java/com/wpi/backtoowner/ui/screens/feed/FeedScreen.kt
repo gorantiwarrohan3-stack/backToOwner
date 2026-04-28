@@ -268,10 +268,26 @@ private fun DashboardPostCard(
 
 @Composable
 private fun MatchBadge(matchPercent: Int?) {
+    if (matchPercent == null || matchPercent <= 0) {
+        Surface(
+            color = Color(0xFFEEEEEE),
+            shape = RoundedCornerShape(20.dp),
+        ) {
+            Text(
+                text = "No Match",
+                color = Color(0xFF888888),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Normal,
+            )
+        }
+        return
+    }
+
     val (bg, text) = when {
-        matchPercent == null || matchPercent <= 0 -> Color(0xFF9E9E9E) to "No Match"
-        matchPercent >= 70 -> WpiCrimson to "${matchPercent}% Match"
-        else -> WpiCrimson to "${matchPercent}% Match"
+        matchPercent >= 80 -> WpiCrimson to "${matchPercent}% AI Match"
+        matchPercent >= 60 -> WpiCrimson.copy(alpha = 0.8f) to "${matchPercent}% AI Match"
+        else -> Color(0xFF4CAF50) to "${matchPercent}% Match"
     }
     Surface(
         color = bg,
@@ -282,7 +298,7 @@ private fun MatchBadge(matchPercent: Int?) {
             color = Color.White,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.Bold,
         )
     }
 }

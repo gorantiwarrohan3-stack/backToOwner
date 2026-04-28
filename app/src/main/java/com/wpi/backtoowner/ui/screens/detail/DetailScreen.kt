@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import androidx.compose.foundation.clickable
 import com.wpi.backtoowner.ui.util.categoryIconForItemTitle
 import com.wpi.backtoowner.domain.model.AiMatchCandidate
 import com.wpi.backtoowner.domain.model.Post
@@ -74,6 +75,7 @@ import java.util.Locale
 fun DetailScreen(
     itemId: String,
     onBack: () -> Unit,
+    onNavigateToDetail: (String) -> Unit,
     onMessageFounder: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DetailViewModel = hiltViewModel(),
@@ -241,6 +243,7 @@ fun DetailScreen(
                         .verticalScroll(rememberScrollState()),
                     post = p,
                     matches = matches,
+                    onItemClick = onNavigateToDetail
                 )
             }
         }
@@ -251,6 +254,7 @@ fun DetailScreen(
 private fun DetailBody(
     post: Post,
     matches: List<AiMatchCandidate>,
+    onItemClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val pagerState = rememberPagerState(pageCount = { 1 })
@@ -348,8 +352,8 @@ private fun DetailBody(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
             ) {
-                items(matches, key = { it.label }) { m ->
-                    MatchCard(m)
+                items(matches, key = { it.id }) { m ->
+                    MatchCard(m, onClick = { onItemClick(m.id) })
                 }
             }
         }
@@ -468,12 +472,13 @@ private fun DetailRow(
 }
 
 @Composable
-private fun MatchCard(match: AiMatchCandidate) {
+private fun MatchCard(match: AiMatchCandidate, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .width(140.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFF1C1C1C))
+            .clickable(onClick = onClick)
             .padding(8.dp),
     ) {
         if (match.imageUrl.isNotBlank()) {
