@@ -26,7 +26,6 @@ private val secretsProperties =
 private fun secretsProp(key: String, default: String = ""): String =
     (secretsProperties.getProperty(key, default) ?: default).trim()
 
-
 android {
     namespace = "com.wpi.backtoowner"
     compileSdk = 35
@@ -81,6 +80,14 @@ android {
         buildConfig = true
     }
 
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/DEPENDENCIES"
+        }
+    }
+
     androidResources {
         noCompress += "tflite"
     }
@@ -115,4 +122,5 @@ dependencies {
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.google.genai)
 }
