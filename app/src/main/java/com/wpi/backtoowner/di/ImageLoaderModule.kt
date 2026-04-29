@@ -34,11 +34,13 @@ object ImageLoaderModule {
             ),
             CookiePolicy.ACCEPT_ALL,
         )
+        val origin = "appwrite-android://${context.packageName}"
         val okHttp = OkHttpClient.Builder()
             .cookieJar(ListenableCookieJar(cookieHandler))
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .header("X-Appwrite-Project", AppwriteConfig.PROJECT_ID)
+                    .header("Origin", origin)
                     .build()
                 chain.proceed(request)
             }
@@ -46,6 +48,7 @@ object ImageLoaderModule {
 
         return ImageLoader.Builder(context)
             .okHttpClient(okHttp)
+            .respectCacheHeaders(false)
             .build()
     }
 }

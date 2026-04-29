@@ -27,6 +27,13 @@ class ChatThreadStore @Inject constructor(
         _threads.value = readAll()
     }
 
+    /** Replaces the inbox with server-derived threads (e.g. after loading messages from Appwrite). */
+    fun replaceAll(threads: List<ChatThreadSummary>) {
+        val sorted = threads.sortedByDescending { it.lastTouchedEpochMs }
+        _threads.value = sorted
+        writeAll(sorted)
+    }
+
     fun touch(
         itemId: String,
         postTitle: String,

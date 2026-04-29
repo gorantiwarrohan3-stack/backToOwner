@@ -35,6 +35,9 @@ private const val FIELD_MATCH_PERCENT = "matchPercent"
 private const val FIELD_POSTER_USER_ID = "posterUserId"
 private const val FIELD_POSTER_DISPLAY_NAME = "posterDisplayName"
 private const val FIELD_RESOLVED = "resolved"
+private const val FIELD_ANCHOR_POST_ID = "anchorPostId"
+private const val FIELD_CANDIDATE_POST_ID = "candidatePostId"
+private const val FIELD_SIMILARITY = "similarity"
 
 @Singleton
 class AppwritePostRepository @Inject constructor(
@@ -141,6 +144,74 @@ class AppwritePostRepository @Inject constructor(
             Unit
         }
     }
+
+    override suspend fun recordFeedMatchResult(
+        anchorPostId: String,
+        candidatePostId: String,
+        similarity: Int,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val uid = account.get().id
+            databases.createDocument(
+                databaseId = requireDb(),
+                collectionId = AppwriteConfig.COLLECTION_FEED_MATCHES,
+                documentId = ID.unique(),
+                data = mapOf(
+                    FIELD_ANCHOR_POST_ID to anchorPostId,
+                    FIELD_CANDIDATE_POST_ID to candidatePostId,
+                    FIELD_SIMILARITY to similarity.coerceIn(0, 100),
+                ),
+                permissions = listOf(
+                    Permission.read(Role.any()),
+                    Permission.update(Role.user(uid)),
+                    Permission.delete(Role.user(uid)),
+                ),
+            )
+            Unit
+        }
+    }
+
+    override suspend fun loadLatestCrossMatchScores(): Result<Map<String, Int>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val latestResp = databases.listDocuments(
+                databaseId = requireDb(),
+                collectionId = AppwriteConfig.COLLECTION_FEED_MATCHES,
+                queries = listOf(
+                    Query.orderDesc("\$createdAt"),
+                    Query.limit(1),
+                ),
+            )
+            val first = latestResp.documents.firstOrNull()
+            val anchor =
+                ((first?.data as? Map<*, *>)?.get(FIELD_ANCHOR_POST_ID))?.toString()?.trim().orEmpty()
+            if (anchor.isEmpty()) return@runCatching emptyMap()
+
+            val batch = databases.listDocuments(
+                databaseId = requireDb(),
+                collectionId = AppwriteConfig.COLLECTION_FEED_MATCHES,
+                queries = listOf(
+                    Query.equal(FIELD_ANCHOR_POST_ID, anchor),
+                    Query.limit(100),
+                ),
+            )
+            batch.documents.mapNotNull { doc ->
+                val map = doc.data as? Map<String, Any?> ?: return@mapNotNull null
+                val cid = map[FIELD_CANDIDATE_POST_ID]?.toString()?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val pct = when (val v = map[FIELD_SIMILARITY]) {
+                    is Number -> v.toInt().coerceIn(0, 100)
+                    else -> null
+                } ?: return@mapNotNull null
+                cid to pct
+            }.toMap()
+        }
+    }
+
+    override fun observeCrossMatchScores(): Flow<Map<String, Int>> = flow {
+        while (coroutineContext.isActive) {
+            emit(loadLatestCrossMatchScores().getOrElse { emptyMap() })
+            delay(4_000L)
+        }
+    }.flowOn(Dispatchers.IO)
 }
 
 private fun parsePostType(raw: String): PostType {
@@ -152,10 +223,29 @@ private fun parsePostType(raw: String): PostType {
     }
 }
 
+/** Matches `user:` role inside permission strings like `update("user:64ab…")`. */
+private val USER_ID_IN_PERMISSION = Regex("""user:([^"/\)\s]+)""")
+
+private fun userIdsFromPermissions(permissions: List<String>): Set<String> {
+    val out = mutableSetOf<String>()
+    for (perm in permissions) {
+        USER_ID_IN_PERMISSION.findAll(perm).forEach { m ->
+            val id = m.groupValues[1].substringBefore('/').trim()
+            if (id.isNotEmpty()) out.add(id)
+        }
+    }
+    return out
+}
+
 private fun normalizeImageUrl(raw: String?): String {
     val value = raw?.trim().orEmpty()
     if (value.isBlank()) return ""
     if (value.startsWith("http://") || value.startsWith("https://")) return value
+    // Path-only view URLs (some clients store `/v1/storage/...`).
+    if (value.startsWith("/v1/")) {
+        val base = AppwriteConfig.ENDPOINT.trimEnd('/')
+        return base + value
+    }
     // Backward compatibility: some earlier rows may have stored only the Appwrite fileId.
     val base = AppwriteConfig.ENDPOINT.trimEnd('/')
     val bucket = AppwriteConfig.STORAGE_BUCKET_ID.trim()
@@ -203,7 +293,12 @@ private fun Document<*>.toPost(): Post? {
     val imageUrl = normalizeImageUrl(
         str(FIELD_IMAGE_URL)
             ?: str("imageUrl")
-            ?: str("imageId"),
+            ?: str("image_url")
+            ?: str("imageId")
+            ?: str("fileId")
+            ?: str("photoUrl")
+            ?: str("photoURL")
+            ?: str("image"),
     )
     val latitude = dbl(FIELD_LATITUDE) ?: return null
     val longitude = dbl(FIELD_LONGITUDE) ?: return null
@@ -225,6 +320,7 @@ private fun Document<*>.toPost(): Post? {
         posterUserId = str(FIELD_POSTER_USER_ID),
         posterDisplayName = str(FIELD_POSTER_DISPLAY_NAME),
         resolved = boolResolved(),
+        permissionUserIds = userIdsFromPermissions(permissions),
     )
 }
 

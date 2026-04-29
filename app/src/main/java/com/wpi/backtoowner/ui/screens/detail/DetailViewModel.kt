@@ -2,71 +2,24 @@ package com.wpi.backtoowner.ui.screens.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.wpi.backtoowner.domain.model.AiMatchCandidate
 import com.wpi.backtoowner.domain.model.Post
-import com.wpi.backtoowner.domain.model.PostType
 import com.wpi.backtoowner.data.local.ChatThreadStore
+import com.wpi.backtoowner.domain.model.AiMatchCandidate
 import com.wpi.backtoowner.domain.repository.PostRepository
+import com.wpi.backtoowner.domain.usecase.SuggestedGeminiMatchesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private val STOPWORDS = setOf(
-    "the", "and", "for", "was", "with", "this", "that", "from", "have", "has", "are",
-    "lost", "found", "item", "wpi", "campus", "near", "region", "area", "just",
-    "into", "onto", "room", "building", "center", "centre", "desk", "table",
-)
-
-private fun tokenize(text: String): Set<String> =
-    Regex("[a-zA-Z0-9]+").findAll(text.lowercase())
-        .map { it.value }
-        .filter { it.length > 2 && it !in STOPWORDS }
-        .toSet()
-
-/** Text overlap 0–99; boosts title hits and opposite lost/found pairs. */
-private fun matchScore(anchor: Post, candidate: Post): Int {
-    val a = tokenize(anchor.title + " " + anchor.description)
-    val b = tokenize(candidate.title + " " + candidate.description)
-    if (a.isEmpty() || b.isEmpty()) return 0
-    val inter = a.intersect(b).size
-    val unionSize = a.union(b).size
-    if (unionSize == 0) return 0
-    var score = ((100.0 * inter) / unionSize).toInt()
-    val titleHit = tokenize(anchor.title).intersect(tokenize(candidate.title)).isNotEmpty()
-    if (titleHit) score = (score + 18).coerceAtMost(96)
-    if (anchor.type != candidate.type) score = (score + 8).coerceAtMost(98)
-    return score.coerceIn(0, 99)
-}
-
-private fun typeLabel(type: PostType): String = when (type) {
-    PostType.LOST -> "Lost"
-    PostType.FOUND -> "Found"
-}
-
-private fun buildSuggestedMatches(anchor: Post, others: List<Post>): List<AiMatchCandidate> =
-    others
-        .asSequence()
-        .filter { it.id != anchor.id }
-        .map { other -> other to matchScore(anchor, other) }
-        .filter { it.second >= 34 }
-        .sortedByDescending { it.second }
-        .take(6)
-        .map { (other, pct) ->
-            AiMatchCandidate(
-                label = "${typeLabel(other.type)}: ${other.title}",
-                matchPercent = pct,
-                imageUrl = other.imageUrl,
-            )
-        }
-        .toList()
-
 @HiltViewModel
 class DetailViewModel @Inject constructor(
     private val postRepository: PostRepository,
     private val chatThreadStore: ChatThreadStore,
+    private val suggestedGeminiMatchesUseCase: SuggestedGeminiMatchesUseCase,
 ) : ViewModel() {
 
     private val _post = MutableStateFlow<Post?>(null)
@@ -75,17 +28,31 @@ class DetailViewModel @Inject constructor(
     private val _matches = MutableStateFlow<List<AiMatchCandidate>>(emptyList())
     val matches: StateFlow<List<AiMatchCandidate>> = _matches.asStateFlow()
 
+    /** True while Gemini suggested-match scoring runs after the item has loaded. */
+    private val _suggestedMatchesLoading = MutableStateFlow(false)
+    val suggestedMatchesLoading: StateFlow<Boolean> = _suggestedMatchesLoading.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private var suggestedMatchesJob: Job? = null
+
     fun load(itemId: String) {
-        viewModelScope.launch {
+        suggestedMatchesJob?.cancel()
+        suggestedMatchesJob = viewModelScope.launch {
             _error.value = null
+            _matches.value = emptyList()
+            _suggestedMatchesLoading.value = false
             postRepository.getPost(itemId).fold(
                 onSuccess = { p ->
                     _post.value = p
-                    val others = postRepository.getPosts().getOrElse { emptyList() }
-                    _matches.value = buildSuggestedMatches(p, others)
+                    _suggestedMatchesLoading.value = true
+                    try {
+                        _matches.value = runCatching { suggestedGeminiMatchesUseCase(p) }
+                            .getOrElse { emptyList() }
+                    } finally {
+                        _suggestedMatchesLoading.value = false
+                    }
                 },
                 onFailure = { e ->
                     _post.value = null

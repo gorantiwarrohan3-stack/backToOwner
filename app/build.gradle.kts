@@ -52,7 +52,9 @@ android {
         )
         manifestPlaceholders["appwriteOAuthScheme"] =
             if (projectId.isEmpty()) "appwrite-callback-UNSET" else "appwrite-callback-$projectId"
-        manifestPlaceholders["mapsApiKey"] = secretsProp("maps.apiKey")
+        val mapsApiKey = secretsProp("maps.apiKey")
+        manifestPlaceholders["mapsApiKey"] = mapsApiKey
+        buildConfigField("Boolean", "HAS_MAPS_API_KEY", mapsApiKey.isNotBlank().toString())
         buildConfigField("String", "GEMINI_API_KEY", "\"${secretsProp("gemini.apiKey")}\"")
     }
 

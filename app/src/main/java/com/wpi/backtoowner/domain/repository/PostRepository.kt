@@ -15,4 +15,19 @@ interface PostRepository {
     suspend fun createPost(newPost: NewPost): Result<String>
 
     suspend fun deletePost(documentId: String): Result<Unit>
+
+    /** Persists Gemini “anchor vs candidate” score so all devices can read match badges from the backend. */
+    suspend fun recordFeedMatchResult(
+        anchorPostId: String,
+        candidatePostId: String,
+        similarity: Int,
+    ): Result<Unit>
+
+    /**
+     * Map of **[candidatePostId] → similarity** for the most recently written cross-match **batch**
+     * (same [anchorPostId]). Empty if unavailable or collection not configured.
+     */
+    suspend fun loadLatestCrossMatchScores(): Result<Map<String, Int>>
+
+    fun observeCrossMatchScores(): Flow<Map<String, Int>>
 }

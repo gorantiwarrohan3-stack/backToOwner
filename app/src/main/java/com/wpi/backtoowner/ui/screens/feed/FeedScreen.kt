@@ -31,17 +31,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import java.util.Locale
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import com.wpi.backtoowner.domain.model.Post
 import com.wpi.backtoowner.domain.model.PostType
 import com.wpi.backtoowner.ui.components.BrandAppHeaderTitleRow
+import com.wpi.backtoowner.ui.components.NetworkImageWithLoader
 import com.wpi.backtoowner.ui.theme.WpiCrimson
 import com.wpi.backtoowner.ui.theme.WpiHeaderMaroon
 import com.wpi.backtoowner.ui.theme.WpiOnCrimson
@@ -113,6 +111,9 @@ fun FeedScreen(
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color(0xFFF2F2F2),
                     unfocusedContainerColor = Color(0xFFF2F2F2),
+                    focusedTextColor = Color(0xFF000000),
+                    unfocusedTextColor = Color(0xFF000000),
+                    cursorColor = Color(0xFF000000),
                 ),
             )
         }
@@ -186,7 +187,6 @@ private fun DashboardPostCard(
         post.latitude,
         post.longitude,
     )
-    val match = post.matchPercent
 
     Card(
         modifier = modifier
@@ -196,93 +196,59 @@ private fun DashboardPostCard(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (post.imageUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = post.imageUrl,
-                        contentDescription = post.title,
-                        modifier = Modifier
-                            .size(88.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop,
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(88.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFE0E0E0)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = categoryIconForItemTitle(post.title),
-                            contentDescription = post.title,
-                            modifier = Modifier.size(44.dp),
-                            tint = WpiHeaderMaroon.copy(alpha = 0.85f),
-                        )
-                    }
-                }
-                Column(
+            if (post.imageUrl.isNotBlank()) {
+                NetworkImageWithLoader(
+                    model = post.imageUrl,
+                    contentDescription = post.title,
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 96.dp),
+                        .size(88.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(88.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFE0E0E0)),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = titleLine,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF111111),
-                    )
-                    Text(
-                        text = time,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF888888),
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                    Text(
-                        text = locationLine,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF666666),
-                        modifier = Modifier.padding(top = 2.dp),
+                    Icon(
+                        imageVector = categoryIconForItemTitle(post.title),
+                        contentDescription = post.title,
+                        modifier = Modifier.size(44.dp),
+                        tint = WpiHeaderMaroon.copy(alpha = 0.85f),
                     )
                 }
             }
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 4.dp, end = 4.dp),
+            Column(
+                modifier = Modifier.weight(1f),
             ) {
-                MatchBadge(matchPercent = match)
+                Text(
+                    text = titleLine,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF111111),
+                )
+                Text(
+                    text = time,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF888888),
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+                Text(
+                    text = locationLine,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF666666),
+                    modifier = Modifier.padding(top = 2.dp),
+                )
             }
         }
-    }
-}
-
-@Composable
-private fun MatchBadge(matchPercent: Int?) {
-    val (bg, text) = when {
-        matchPercent == null || matchPercent <= 0 -> Color(0xFF9E9E9E) to "No Match"
-        matchPercent >= 70 -> WpiCrimson to "${matchPercent}% Match"
-        else -> WpiCrimson to "${matchPercent}% Match"
-    }
-    Surface(
-        color = bg,
-        shape = RoundedCornerShape(20.dp),
-    ) {
-        Text(
-            text = text,
-            color = Color.White,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-        )
     }
 }

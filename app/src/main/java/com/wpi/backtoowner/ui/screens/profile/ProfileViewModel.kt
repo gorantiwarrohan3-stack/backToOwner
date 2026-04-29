@@ -46,7 +46,16 @@ class ProfileViewModel @Inject constructor(
                     val postsResult = postRepository.getPosts()
                     val posts = postsResult.getOrElse { emptyList() }
                     val postsFailed = postsResult.isFailure
-                    val mine = posts.filter { it.posterUserId != null && it.posterUserId == user.id }
+                    val mine = posts.filter { post ->
+                        when {
+                            post.posterUserId == user.id -> true
+                            user.id in post.permissionUserIds -> true
+                            post.posterUserId == null &&
+                                post.posterDisplayName != null &&
+                                post.posterDisplayName.trim().equals(user.name.trim(), ignoreCase = true) -> true
+                            else -> false
+                        }
+                    }
                     val myPosts = mine.sortedByDescending { it.createdAtEpochMs }
                     _uiState.value = ProfileUiState.Ready(
                         user = user,

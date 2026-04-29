@@ -51,7 +51,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,10 +59,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import com.wpi.backtoowner.domain.model.AuthUserSummary
 import com.wpi.backtoowner.domain.model.Post
 import com.wpi.backtoowner.domain.model.PostType
+import com.wpi.backtoowner.ui.components.BrandAppHeaderTitleRow
+import com.wpi.backtoowner.ui.components.NetworkImageWithLoader
 import com.wpi.backtoowner.ui.theme.WpiCrimson
 import com.wpi.backtoowner.ui.theme.WpiHeaderMaroon
 import com.wpi.backtoowner.ui.theme.WpiOnCrimson
@@ -95,27 +95,17 @@ fun ProfileScreen(
             .verticalScroll(rememberScrollState())
             .background(Color(0xFFF5F5F5)),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = WpiHeaderMaroon,
         ) {
-            Text(
-                text = "WPI",
-                color = WpiCrimson,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = " | ",
-                color = Color.LightGray,
-                modifier = Modifier.padding(horizontal = 8.dp),
-            )
-            Row {
-                Text("BackTo", color = WpiCrimson, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-                Text("Owner", color = Color(0xFF555555), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BrandAppHeaderTitleRow(modifier = Modifier.fillMaxWidth())
             }
         }
 
@@ -174,13 +164,24 @@ fun ProfileScreen(
                         )
                     }
                     Spacer(Modifier.size(16.dp))
-                    Column {
-                        Text(
-                            user.name,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF111111),
-                        )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                user.name,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF111111),
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            TextButton(onClick = { showProfileEditor = true }) {
+                                Text("Edit profile", color = WpiCrimson, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
                         Text(
                             user.email,
                             style = MaterialTheme.typography.bodyMedium,
@@ -194,12 +195,6 @@ fun ProfileScreen(
                                 color = Color(0xFF666666),
                                 modifier = Modifier.padding(top = 4.dp),
                             )
-                        }
-                        TextButton(
-                            onClick = { showProfileEditor = true },
-                            modifier = Modifier.padding(top = 4.dp),
-                        ) {
-                            Text("Edit profile details", color = WpiCrimson, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -277,7 +272,7 @@ fun ProfileScreen(
                     title = "My Posts",
                 )
                 Text(
-                    "One listing per card. Swipe sideways when you have more than one. Delete when the item is returned.",
+                    "Swipe for more listings. One card per screen. Delete when the item is returned.",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF666666),
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
@@ -367,15 +362,17 @@ private fun ProfileMyPostsList(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 20.dp),
-            pageSpacing = 12.dp,
+            contentPadding = PaddingValues(0.dp),
+            pageSpacing = 0.dp,
         ) { page ->
             val post = posts[page]
             ProfileMyPostRow(
                 post = post,
                 onOpen = { onOpenPost(post.id) },
                 onDelete = { onRequestDelete(post) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
             )
         }
         if (pageCount > 1) {
@@ -429,13 +426,12 @@ private fun ProfileMyPostRow(
         ) {
             val url = post.imageUrl.takeIf { it.isNotBlank() }
             if (url != null) {
-                AsyncImage(
+                NetworkImageWithLoader(
                     model = url,
                     contentDescription = post.title,
                     modifier = Modifier
                         .size(72.dp)
                         .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop,
                 )
             } else {
                 Box(

@@ -15,6 +15,11 @@ data class Post(
     val posterUserId: String? = null,
     /** Display name from account at post time; null for older documents. */
     val posterDisplayName: String? = null,
+    /**
+     * User IDs parsed from Appwrite `$permissions` strings (`user:…`).
+     * Used when [posterUserId] was never stored (schema fallback on create).
+     */
+    val permissionUserIds: Set<String> = emptySet(),
     /** When true, treat as closed / returned (optional Appwrite `resolved` attribute). */
     val resolved: Boolean = false,
 )

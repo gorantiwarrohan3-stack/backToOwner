@@ -29,7 +29,7 @@ class MapViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             postRepository.observePosts().collect { result ->
-                result.onSuccess { _posts.value = it }
+                _posts.value = result.getOrElse { emptyList() }
             }
         }
     }

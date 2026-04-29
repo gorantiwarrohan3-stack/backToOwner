@@ -1,5 +1,6 @@
 package com.wpi.backtoowner.ui.screens.chat
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +21,8 @@ import io.appwrite.services.Databases
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -42,7 +45,12 @@ class ChatViewModel @Inject constructor(
     private val databases: Databases,
 ) : ViewModel() {
 
-    private val itemId: String = savedStateHandle.get<String>(Screen.Chat.ARG_ITEM_ID).orEmpty()
+    companion object {
+        private const val MESSAGE_POLL_INTERVAL_MS = 2_600L
+    }
+
+    private val itemId: String =
+        Uri.decode(savedStateHandle.get<String>(Screen.Chat.ARG_ITEM_ID).orEmpty())
 
     private val _post = MutableStateFlow<Post?>(null)
     val post: StateFlow<Post?> = _post.asStateFlow()
@@ -101,6 +109,12 @@ class ChatViewModel @Inject constructor(
                         else -> poster ?: "Listing poster"
                     }
                     loadMessages()
+                    launch {
+                        while (isActive) {
+                            delay(MESSAGE_POLL_INTERVAL_MS)
+                            loadMessages()
+                        }
+                    }
                 },
                 onFailure = { e ->
                     _loadError.value = e.message ?: "Could not load listing."
