@@ -1,8 +1,17 @@
 package com.wpi.backtoowner.ui.screens.createpost
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.os.Build
+import android.os.Bundle
+import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -27,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,9 +69,34 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wpi.backtoowner.domain.model.PostType
+import com.wpi.backtoowner.ui.components.MainHeaderTrailingIcons
 import com.wpi.backtoowner.ui.theme.WpiHeaderMaroon
 import com.wpi.backtoowner.ui.theme.WpiOnCrimson
 import com.wpi.backtoowner.ui.util.categoryIconForItemTitle
+
+/**
+ * Opens the system camera; requests the rear camera on OEMs that honor legacy intent extras (best-effort).
+ * Returns the thumbnail [Bitmap] in the result extras when no [MediaStore.EXTRA_OUTPUT] URI is used.
+ */
+private class CaptureBackFacingPhotoContract : ActivityResultContract<Unit, Bitmap?>() {
+    override fun createIntent(context: Context, input: Unit): Intent =
+        Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+            // 0 == legacy Camera.CameraInfo.CAMERA_FACING_BACK on many devices.
+            putExtra("android.intent.extras.CAMERA_FACING", 0)
+            putExtra("android.intent.extra.USE_FRONT_CAMERA", false)
+        }
+
+    override fun parseResult(resultCode: Int, intent: Intent?): Bitmap? {
+        if (resultCode != Activity.RESULT_OK) return null
+        val extras: Bundle = intent?.extras ?: return null
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            extras.getParcelable("data", Bitmap::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            extras.getParcelable<Bitmap>("data")
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -102,22 +137,33 @@ fun CreatePostScreen(
         PostType.FOUND -> previewBitmap != null && category.isNotBlank() && description.isNotBlank()
     }
 
-    val takePictureLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview(),
+    val capturePhotoLauncher = rememberLauncherForActivityResult(
+        contract = CaptureBackFacingPhotoContract(),
     ) { bitmap ->
         if (bitmap != null) viewModel.onPhotoCaptured(bitmap)
     }
-    val permissionLauncher = rememberLauncherForActivityResult(
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted ->
-        if (granted) takePictureLauncher.launch(null)
+        if (granted) capturePhotoLauncher.launch(Unit)
     }
-    val takePhoto = {
+    val takePhotoWithBackCamera = {
         when {
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                PackageManager.PERMISSION_GRANTED -> takePictureLauncher.launch(null)
-            else -> permissionLauncher.launch(Manifest.permission.CAMERA)
+                PackageManager.PERMISSION_GRANTED -> capturePhotoLauncher.launch(Unit)
+            else -> cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
+    }
+
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri != null) viewModel.onImagePickedFromUri(uri)
+    }
+    val pickImageFromDevice = {
+        pickImageLauncher.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+        )
     }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -149,6 +195,7 @@ fun CreatePostScreen(
                     }
                 },
                 actions = {
+                    MainHeaderTrailingIcons(tint = WpiHeaderMaroon)
                     Button(
                         onClick = {
                             viewModel.clearPostError()
@@ -206,23 +253,56 @@ fun CreatePostScreen(
                         tint = WpiHeaderMaroon.copy(alpha = 0.45f),
                     )
                 }
-                IconButton(
-                    onClick = takePhoto,
+                Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 12.dp)
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(WpiHeaderMaroon),
+                        .padding(bottom = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = "Camera", tint = Color.White)
+                    Text(
+                        text = "Capture / upload",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = WpiHeaderMaroon,
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(top = 6.dp),
+                    ) {
+                        IconButton(
+                            onClick = takePhotoWithBackCamera,
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(WpiHeaderMaroon),
+                        ) {
+                            Icon(
+                                Icons.Default.CameraAlt,
+                                contentDescription = "Capture with camera (rear when supported)",
+                                tint = Color.White,
+                            )
+                        }
+                        IconButton(
+                            onClick = pickImageFromDevice,
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(WpiHeaderMaroon),
+                        ) {
+                            Icon(
+                                Icons.Default.PhotoLibrary,
+                                contentDescription = "Upload existing photo",
+                                tint = Color.White,
+                            )
+                        }
+                    }
                 }
             }
             Text(
                 if (postType == PostType.LOST) {
-                    "Photo optional for lost items — add a clear description."
+                    "Photo optional for lost items — capture, upload, or add a clear description."
                 } else {
-                    "Photo required for found items."
+                    "Photo required for found items — capture or upload."
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = onSurface.copy(alpha = 0.72f),

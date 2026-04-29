@@ -1,5 +1,6 @@
 package com.wpi.backtoowner.ui.screens.chat
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,12 +45,15 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wpi.backtoowner.ui.components.BrandAppHeaderTitleRow
+import com.wpi.backtoowner.ui.components.MainHeaderTrailingIcons
 import com.wpi.backtoowner.ui.theme.WpiHeaderMaroon
 import com.wpi.backtoowner.ui.theme.WpiOnCrimson
 
 private val BubbleSurface = Color(0xFFEEEEEE)
+private val BubbleSurfaceHighlight = Color(0xFFFFF8E1)
 private val BubbleOnSurface = Color(0xFF1A1A1A)
 private val ScreenBg = Color(0xFF0E0E0E)
+private val UnreadHighlightBorder = Color(0xFFC41230)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,6 +95,7 @@ fun ChatScreen(
                             titleFontSize = 22.sp,
                             spacerWidth = 8.dp,
                         )
+                        MainHeaderTrailingIcons()
                     }
                 }
                 Surface(
@@ -279,8 +284,9 @@ private fun ChatBubbleRow(msg: ChatBubbleUi) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            color = BubbleSurface,
+            color = if (msg.isUnreadHighlight) BubbleSurfaceHighlight else BubbleSurface,
             contentColor = BubbleOnSurface,
+            border = if (msg.isUnreadHighlight) BorderStroke(2.dp, UnreadHighlightBorder) else null,
         ) {
             Column(Modifier.padding(12.dp)) {
                 Text(

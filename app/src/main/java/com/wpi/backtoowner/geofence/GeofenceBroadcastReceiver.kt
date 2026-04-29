@@ -14,6 +14,8 @@ import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingEvent
 import com.wpi.backtoowner.MainActivity
 import com.wpi.backtoowner.R
+import com.wpi.backtoowner.di.AppServicesEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 
 class GeofenceBroadcastReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -23,6 +25,12 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
         if (event.geofenceTransition != Geofence.GEOFENCE_TRANSITION_ENTER) return
         val first = event.triggeringGeofences?.firstOrNull() ?: return
         val zoneName = GeofencingSupport.zoneNameById(first.requestId) ?: "WPI safe zone"
+        runCatching {
+            val app = context.applicationContext
+            EntryPointAccessors.fromApplication(app, AppServicesEntryPoint::class.java)
+                .inAppNotificationStore()
+                .appendGeofence(zoneName)
+        }
         showNotification(context, zoneName)
     }
 }

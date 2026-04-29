@@ -8,6 +8,11 @@
 #   com.wpi.backtoowner
 #
 # Endpoint must match your project's region (e.g. fra.cloud.appwrite.io).
+#
+# Databases → create collections: `posts`, `posts_archive`, `messages`, `user_profiles`, etc.
+# `posts_archive` must duplicate the attributes of `posts` (same field names/types). Each new post
+# is written to both collections with the **same document id**; deletes only touch `posts` so the
+# archive retains history for the insights dashboard.
 
 appwrite.endpoint=https://fra.cloud.appwrite.io/v1
 appwrite.projectId=

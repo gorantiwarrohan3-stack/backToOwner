@@ -13,6 +13,8 @@ import com.wpi.backtoowner.ui.screens.createpost.CreatePostScreen
 import com.wpi.backtoowner.ui.screens.detail.DetailScreen
 import com.wpi.backtoowner.ui.screens.feed.FeedScreen
 import com.wpi.backtoowner.ui.screens.map.MapScreen
+import com.wpi.backtoowner.ui.screens.insights.InsightsDashboardScreen
+import com.wpi.backtoowner.ui.screens.notifications.NotificationsScreen
 import com.wpi.backtoowner.ui.screens.profile.ProfileScreen
 
 @Composable
@@ -45,6 +47,27 @@ fun BackToOwnerNavHost(
             ChatListScreen(
                 onOpenThread = { id ->
                     navController.navigate(Screen.Chat.createRoute(id))
+                },
+            )
+        }
+        composable(Screen.Insights.route) {
+            InsightsDashboardScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Screen.Notifications.route) {
+            NotificationsScreen(
+                onOpenChat = { itemId ->
+                    navController.navigate(Screen.Chat.createRoute(itemId)) {
+                        launchSingleTop = true
+                    }
+                },
+                onOpenMap = {
+                    navController.navigate(Screen.Map.route) {
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 },
             )
         }

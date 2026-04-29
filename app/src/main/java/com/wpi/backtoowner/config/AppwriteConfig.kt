@@ -6,7 +6,7 @@ import com.wpi.backtoowner.BuildConfig
  * Appwrite settings from root **`appwrite.properties`** (Gradle → [BuildConfig]).
  * This repo may commit that file for shared class builds; forks can use **`appwrite.properties.example`**.
  *
- * **Collections:** `posts`, `messages`, `user_profiles` — attributes and permissions per your Appwrite Console setup.
+ * **Collections:** `posts`, `posts_archive` (same attributes as posts; historical mirror at create time), `messages`, `user_profiles` — attributes and permissions per your Appwrite Console setup.
  *
  * **`feed_matches`** (optional but recommended): `anchorPostId`, `candidatePostId`, `similarity` (int 0–100).
  *   Lets every signed-in device show the same Gemini “vs latest report” feed badges. Create permissions: **Authenticated**
@@ -26,6 +26,8 @@ object AppwriteConfig {
     val DATABASE_ID: String = BuildConfig.APPWRITE_DATABASE_ID
 
     const val COLLECTION_POSTS: String = "posts"
+    /** Historical copy of every created post; not deleted when live [COLLECTION_POSTS] rows are removed. */
+    const val COLLECTION_POSTS_ARCHIVE: String = "posts_archive"
     const val COLLECTION_MESSAGES: String = "messages"
     const val COLLECTION_USER_PROFILES: String = "user_profiles"
     const val COLLECTION_FEED_MATCHES: String = "feed_matches"

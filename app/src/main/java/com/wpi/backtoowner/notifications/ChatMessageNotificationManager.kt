@@ -45,6 +45,8 @@ class ChatMessageNotificationManager @Inject constructor(
     private val account: Account,
     private val postRepository: PostRepository,
     private val chatThreadStore: ChatThreadStore,
+    private val inAppNotificationStore: InAppNotificationStore,
+    private val chatReadTracker: ChatReadTracker,
     @ApplicationContext
     private val appContext: Context,
 ) {
@@ -65,7 +67,10 @@ class ChatMessageNotificationManager @Inject constructor(
     private suspend fun pollAndNotify() = supervisorScope {
         val userId = account.get().id
         val trackedItemIds = trackedItemIdsFor(userId)
-        if (trackedItemIds.isEmpty()) return@supervisorScope
+        if (trackedItemIds.isEmpty()) {
+            chatReadTracker.refreshUnreadCount()
+            return@supervisorScope
+        }
         for (itemId in trackedItemIds) {
             val latest = latestMessage(itemId) ?: continue
             if (latest.senderUserId == userId) continue
@@ -76,10 +81,18 @@ class ChatMessageNotificationManager @Inject constructor(
                 continue
             }
             if (latest.createdAtMs > seenMs) {
+                inAppNotificationStore.appendChatMessageIfAbsent(
+                    messageDocumentId = latest.documentId,
+                    itemId = itemId,
+                    title = "New message from ${latest.senderName}",
+                    body = latest.body.ifBlank { "You have a new message." },
+                    createdEpochMs = latest.createdAtMs,
+                )
                 notifyIncoming(itemId, latest.senderName, latest.body)
                 prefs.edit().putLong(key, latest.createdAtMs).apply()
             }
         }
+        chatReadTracker.refreshUnreadCount()
     }
 
     private suspend fun trackedItemIdsFor(userId: String): Set<String> {
@@ -108,7 +121,7 @@ class ChatMessageNotificationManager @Inject constructor(
         val senderName = data["senderName"]?.toString()?.trim().orEmpty().ifBlank { "Someone" }
         val body = data["body"]?.toString()?.trim().orEmpty()
         val createdAtMs = parseIsoMs(doc.createdAt)
-        LatestMessage(itemId, senderUserId, senderName, body, createdAtMs)
+        LatestMessage(itemId, doc.id, senderUserId, senderName, body, createdAtMs)
     }
 
     private fun notifyIncoming(itemId: String, sender: String, body: String) {
@@ -153,10 +166,18 @@ class ChatMessageNotificationManager @Inject constructor(
             },
         )
     }
+
+    /** Clears poller state and cancels any posted notification for this thread. */
+    fun clearThreadNotificationState(itemId: String) {
+        if (itemId.isBlank()) return
+        prefs.edit().remove("last_ms_$itemId").apply()
+        NotificationManagerCompat.from(appContext).cancel(itemId.hashCode())
+    }
 }
 
 private data class LatestMessage(
     val itemId: String,
+    val documentId: String,
     val senderUserId: String,
     val senderName: String,
     val body: String,

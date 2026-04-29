@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wpi.backtoowner.domain.model.Post
 import com.wpi.backtoowner.domain.model.PostType
 import com.wpi.backtoowner.ui.components.BrandAppHeaderTitleRow
+import com.wpi.backtoowner.ui.components.MainHeaderTrailingIcons
 import com.wpi.backtoowner.ui.components.NetworkImageWithLoader
 import com.wpi.backtoowner.ui.theme.WpiCrimson
 import com.wpi.backtoowner.ui.theme.WpiHeaderMaroon
@@ -68,10 +69,11 @@ fun FeedScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = 8.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BrandAppHeaderTitleRow(modifier = Modifier.fillMaxWidth())
+                BrandAppHeaderTitleRow(modifier = Modifier.weight(1f))
+                MainHeaderTrailingIcons()
             }
         }
 
@@ -143,7 +145,10 @@ fun FeedScreen(
                         )
                     }
                 } else {
-                    items(posts, key = { it.id }) { post ->
+                    itemsIndexed(
+                        posts,
+                        key = { index, post -> "${post.id}_$index" },
+                    ) { _, post ->
                         DashboardPostCard(post = post, onClick = { onNavigateToDetail(post.id) })
                     }
                 }
@@ -217,6 +222,7 @@ private fun DashboardPostCard(
                 NetworkImageWithLoader(
                     model = post.imageUrl,
                     contentDescription = post.title,
+                    compositionKey = post.id,
                     modifier = Modifier
                         .size(88.dp)
                         .clip(RoundedCornerShape(12.dp)),

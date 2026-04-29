@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wpi.backtoowner.ui.components.MainHeaderTrailingIcons
 import com.wpi.backtoowner.ui.components.NetworkImageWithLoader
 import com.wpi.backtoowner.ui.util.categoryIconForItemTitle
 import com.wpi.backtoowner.domain.model.AiMatchCandidate
@@ -135,6 +136,9 @@ fun DetailScreen(
                         )
                     }
                 },
+                actions = {
+                    MainHeaderTrailingIcons()
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = WpiHeaderMaroon,
                     titleContentColor = Color.White,
@@ -181,7 +185,15 @@ fun DetailScreen(
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = WpiMessageBlue),
                     ) {
-                        Text("Message Founder", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = if (listing.type == PostType.LOST) {
+                                "Message owner"
+                            } else {
+                                "Message Founder"
+                            },
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     }
                 }
             }
@@ -252,6 +264,7 @@ private fun DetailBody(
                 NetworkImageWithLoader(
                     model = url,
                     contentDescription = null,
+                    compositionKey = post.id,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
@@ -337,7 +350,10 @@ private fun DetailBody(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                 ) {
-                    items(matches, key = { it.candidatePostId }) { m ->
+                    itemsIndexed(
+                        matches,
+                        key = { index, m -> "${m.candidatePostId}_$index" },
+                    ) { _, m ->
                         MatchCard(
                             match = m,
                             onClick = { onSuggestedMatchClick(m.candidatePostId) },
@@ -384,6 +400,7 @@ private fun MatchCard(
             NetworkImageWithLoader(
                 model = match.imageUrl,
                 contentDescription = match.label,
+                compositionKey = match.candidatePostId,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(90.dp)

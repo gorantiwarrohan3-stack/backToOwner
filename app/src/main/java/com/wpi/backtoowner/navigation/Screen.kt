@@ -23,6 +23,11 @@ sealed class Screen(val route: String) {
 
     data object ChatList : Screen("chats")
 
+    data object Notifications : Screen("notifications")
+
+    /** Analytics from [posts_archive] (historical posts). */
+    data object Insights : Screen("insights")
+
     data object Chat : Screen("chat/{itemId}") {
         const val ARG_ITEM_ID = "itemId"
 

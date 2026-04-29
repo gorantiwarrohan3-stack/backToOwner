@@ -1,9 +1,11 @@
 package com.wpi.backtoowner.di
 
+import com.wpi.backtoowner.data.repository.AppwriteChatMessagingRepository
 import com.wpi.backtoowner.data.repository.AppwritePostImageRepository
 import com.wpi.backtoowner.data.repository.AppwritePostRepository
 import com.wpi.backtoowner.data.repository.GeminiAiMatchingRepository
 import com.wpi.backtoowner.domain.repository.AiMatchingRepository
+import com.wpi.backtoowner.domain.repository.ChatMessagingRepository
 import com.wpi.backtoowner.domain.repository.PostImageRepository
 import com.wpi.backtoowner.domain.repository.PostRepository
 import dagger.Binds
@@ -27,4 +29,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAiMatchingRepository(impl: GeminiAiMatchingRepository): AiMatchingRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindChatMessagingRepository(impl: AppwriteChatMessagingRepository): ChatMessagingRepository
 }

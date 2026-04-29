@@ -2,6 +2,7 @@ package com.wpi.backtoowner
 
 import android.app.Application
 import android.util.Log
+import com.google.android.gms.maps.MapsInitializer
 import com.wpi.backtoowner.geofence.GeofencingSupport
 import com.wpi.backtoowner.notifications.ChatMessageNotificationManager
 import dagger.hilt.android.HiltAndroidApp
@@ -14,6 +15,12 @@ class BackToOwnerApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // BitmapDescriptorFactory / custom markers require this before any map composable runs.
+        runCatching {
+            MapsInitializer.initialize(this, MapsInitializer.Renderer.LATEST) { _ -> }
+        }.onFailure { e ->
+            Log.w("BackToOwner", "Maps SDK initialize failed (map pins may crash until fixed)", e)
+        }
         if (BuildConfig.APPWRITE_PROJECT_ID.isBlank()) {
             Log.e(
                 "BackToOwner",

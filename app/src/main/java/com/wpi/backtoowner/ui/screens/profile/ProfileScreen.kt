@@ -63,6 +63,7 @@ import com.wpi.backtoowner.domain.model.AuthUserSummary
 import com.wpi.backtoowner.domain.model.Post
 import com.wpi.backtoowner.domain.model.PostType
 import com.wpi.backtoowner.ui.components.BrandAppHeaderTitleRow
+import com.wpi.backtoowner.ui.components.MainHeaderTrailingIcons
 import com.wpi.backtoowner.ui.components.NetworkImageWithLoader
 import com.wpi.backtoowner.ui.theme.WpiCrimson
 import com.wpi.backtoowner.ui.theme.WpiHeaderMaroon
@@ -102,10 +103,11 @@ fun ProfileScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = 8.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BrandAppHeaderTitleRow(modifier = Modifier.fillMaxWidth())
+                BrandAppHeaderTitleRow(modifier = Modifier.weight(1f))
+                MainHeaderTrailingIcons()
             }
         }
 
@@ -433,6 +435,7 @@ private fun ProfileMyPostRow(
                 NetworkImageWithLoader(
                     model = url,
                     contentDescription = post.title,
+                    compositionKey = post.id,
                     modifier = Modifier
                         .size(72.dp)
                         .clip(RoundedCornerShape(8.dp)),

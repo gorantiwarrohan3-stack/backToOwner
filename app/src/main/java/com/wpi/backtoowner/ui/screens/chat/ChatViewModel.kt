@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wpi.backtoowner.config.AppwriteConfig
 import com.wpi.backtoowner.data.local.ChatThreadStore
+import com.wpi.backtoowner.notifications.ChatReadTracker
+import com.wpi.backtoowner.notifications.InAppNotificationStore
+import com.wpi.backtoowner.notifications.parseAppwriteCreatedAtToMs
 import com.wpi.backtoowner.domain.model.Post
 import com.wpi.backtoowner.domain.model.PostType
 import com.wpi.backtoowner.domain.repository.AuthRepository
@@ -34,6 +37,9 @@ data class ChatBubbleUi(
     val roleLabel: String,
     val body: String,
     val isSelf: Boolean,
+    val createdEpochMs: Long,
+    /** Peer messages newer than the read cursor when this screen loaded (shown with accent). */
+    val isUnreadHighlight: Boolean,
 )
 
 @HiltViewModel
@@ -43,6 +49,8 @@ class ChatViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val chatThreadStore: ChatThreadStore,
     private val databases: Databases,
+    private val chatReadTracker: ChatReadTracker,
+    private val inAppNotificationStore: InAppNotificationStore,
 ) : ViewModel() {
 
     companion object {
@@ -135,24 +143,53 @@ class ChatViewModel @Inject constructor(
     private suspend fun loadMessages() {
         val uid = currentUserId
         val post = _post.value ?: return
+        val beforeRead = chatReadTracker.peekReadEpochMs(itemId)
         val result = withContext(Dispatchers.IO) {
             runCatching {
+                // Newest first so limit(200) is the latest 200 rows; ascending orderAsc+limit returned the *oldest* 200
+                // and broke read cursors when a thread grew past the limit.
                 val response = databases.listDocuments(
                     databaseId = AppwriteConfig.DATABASE_ID,
                     collectionId = AppwriteConfig.COLLECTION_MESSAGES,
                     queries = listOf(
                         Query.equal("itemId", itemId),
-                        Query.orderAsc("\$createdAt"),
+                        Query.orderDesc("\$createdAt"),
                         Query.limit(200),
                     ),
                 )
-                response.documents.mapNotNull { it.toChatBubble(uid) }
+                val docsDesc = response.documents
+                val maxCreated = docsDesc.maxOfOrNull { parseAppwriteCreatedAtToMs(it.createdAt) } ?: 0L
+                val chronological = docsDesc.asReversed()
+                if (beforeRead != Long.MIN_VALUE) {
+                    for (doc in docsDesc) {
+                        @Suppress("UNCHECKED_CAST")
+                        val map = doc.data as? Map<String, Any?> ?: continue
+                        val senderId = map["senderUserId"]?.toString()?.trim().orEmpty()
+                        if (senderId.isBlank() || senderId == uid) continue
+                        val created = parseAppwriteCreatedAtToMs(doc.createdAt)
+                        if (created <= beforeRead) continue
+                        val senderName = map["senderName"]?.toString()?.trim().orEmpty().ifBlank { "Someone" }
+                        val body = map["body"]?.toString()?.trim().orEmpty()
+                        inAppNotificationStore.appendChatMessageIfAbsent(
+                            messageDocumentId = doc.id,
+                            itemId = itemId,
+                            title = "New message from $senderName",
+                            body = body.ifBlank { "You have a new message." },
+                            createdEpochMs = created,
+                        )
+                    }
+                }
+                val bubbles = chronological.mapNotNull { it.toChatBubble(uid, beforeRead) }
+                bubbles to maxCreated
             }
         }
         result.fold(
-            onSuccess = {
-                _messages.value = it
+            onSuccess = { (bubbles, maxCreated) ->
+                _messages.value = bubbles
                 _messagesLoadError.value = null
+                if (maxCreated > 0L) {
+                    chatReadTracker.markThreadRead(itemId, maxCreated)
+                }
             },
             onFailure = { e ->
                 _messagesLoadError.value = e.message ?: "Could not load messages."
@@ -223,7 +260,7 @@ class ChatViewModel @Inject constructor(
 }
 
 @Suppress("UNCHECKED_CAST")
-private fun Document<*>.toChatBubble(currentUserId: String?): ChatBubbleUi? {
+private fun Document<*>.toChatBubble(currentUserId: String?, readCursorMs: Long): ChatBubbleUi? {
     val map = data as? Map<String, Any?> ?: return null
     fun str(key: String) = map[key]?.toString()?.takeIf { it.isNotBlank() }
     val senderId = str("senderUserId")
@@ -231,11 +268,17 @@ private fun Document<*>.toChatBubble(currentUserId: String?): ChatBubbleUi? {
     val role = str("senderRole") ?: "Member"
     val body = str("body") ?: return null
     val self = currentUserId != null && senderId == currentUserId
+    val createdMs = parseAppwriteCreatedAtToMs(createdAt)
+    val highlight = !self &&
+        readCursorMs != Long.MIN_VALUE &&
+        createdMs > readCursorMs
     return ChatBubbleUi(
         id = id,
         displayName = senderName,
         roleLabel = role,
         body = body,
         isSelf = self,
+        createdEpochMs = createdMs,
+        isUnreadHighlight = highlight,
     )
 }

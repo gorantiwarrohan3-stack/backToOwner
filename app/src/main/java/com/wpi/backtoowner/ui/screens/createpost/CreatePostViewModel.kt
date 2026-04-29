@@ -2,6 +2,7 @@ package com.wpi.backtoowner.ui.screens.createpost
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import android.location.Address
 import android.location.Geocoder
 import androidx.lifecycle.ViewModel
@@ -15,8 +16,10 @@ import com.wpi.backtoowner.data.local.FoundLocationDraft
 import com.wpi.backtoowner.domain.repository.PostImageRepository
 import com.wpi.backtoowner.domain.repository.PostRepository
 import coil.ImageLoader
+import androidx.core.graphics.drawable.toBitmap
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.wpi.backtoowner.domain.usecase.CrossMatchAgainstFeedUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -134,6 +137,30 @@ class CreatePostViewModel @Inject constructor(
         }
     }
 
+    fun onImagePickedFromUri(uri: Uri) {
+        viewModelScope.launch {
+            val bitmap = withContext(Dispatchers.IO) {
+                runCatching {
+                    val request = ImageRequest.Builder(appContext)
+                        .data(uri)
+                        .size(1600, 1600)
+                        .allowHardware(false)
+                        .bitmapConfig(Bitmap.Config.ARGB_8888)
+                        .build()
+                    when (val result = imageLoader.execute(request)) {
+                        is SuccessResult -> result.drawable.toBitmap()
+                        else -> null
+                    }
+                }.getOrNull()
+            }
+            if (bitmap != null) {
+                onPhotoCaptured(bitmap)
+            } else {
+                _postError.value = "Could not load that image. Try another file."
+            }
+        }
+    }
+
     fun onSuggestedLabelSelected(label: String) {
         _smartTag.value = null
         _category.value = label
@@ -184,7 +211,7 @@ class CreatePostViewModel @Inject constructor(
             }
         } else {
             if (bitmap == null) {
-                _postError.value = "Take a photo of the found item before posting."
+                _postError.value = "Add a photo of the found item (capture or upload) before posting."
                 return
             }
             if (category.isBlank() || descRaw.isBlank()) {

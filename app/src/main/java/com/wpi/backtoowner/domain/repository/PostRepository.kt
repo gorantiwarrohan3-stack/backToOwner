@@ -16,6 +16,11 @@ interface PostRepository {
 
     suspend fun deletePost(documentId: String): Result<Unit>
 
+    /**
+     * All rows in [AppwriteConfig.COLLECTION_POSTS_ARCHIVE] (immutable history; survives deletes on `posts`).
+     */
+    suspend fun getArchivedPosts(): Result<List<Post>>
+
     /** Persists Gemini “anchor vs candidate” score so all devices can read match badges from the backend. */
     suspend fun recordFeedMatchResult(
         anchorPostId: String,

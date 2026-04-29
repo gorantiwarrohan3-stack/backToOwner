@@ -13,6 +13,7 @@ import org.json.JSONObject
 
 private const val PREFS = "backtoowner_chat_threads"
 private const val KEY_JSON = "threads_json"
+private const val KEY_HIDDEN_ITEM_IDS = "hidden_item_ids_json"
 
 @Singleton
 class ChatThreadStore @Inject constructor(
@@ -24,14 +25,30 @@ class ChatThreadStore @Inject constructor(
     val threads: StateFlow<List<ChatThreadSummary>> = _threads.asStateFlow()
 
     init {
-        _threads.value = readAll()
+        _threads.value = readAll().filterNot { readHiddenItemIds().contains(it.itemId) }
     }
 
     /** Replaces the inbox with server-derived threads (e.g. after loading messages from Appwrite). */
     fun replaceAll(threads: List<ChatThreadSummary>) {
-        val sorted = threads.sortedByDescending { it.lastTouchedEpochMs }
+        val hidden = readHiddenItemIds()
+        val sorted = threads
+            .filterNot { hidden.contains(it.itemId) }
+            .sortedByDescending { it.lastTouchedEpochMs }
         _threads.value = sorted
         writeAll(sorted)
+    }
+
+    /**
+     * Removes the thread from the local list and hides it from future server refreshes until the user
+     * opens that listing chat again ([touch] clears the hidden flag).
+     */
+    fun hideThreadPermanently(itemId: String) {
+        if (itemId.isBlank()) return
+        val hidden = readHiddenItemIds().toMutableSet().apply { add(itemId) }
+        saveHiddenItemIds(hidden)
+        val next = _threads.value.filterNot { it.itemId == itemId }
+        _threads.value = next
+        writeAll(next)
     }
 
     fun touch(
@@ -41,6 +58,7 @@ class ChatThreadStore @Inject constructor(
         listingType: PostType,
     ) {
         if (itemId.isBlank()) return
+        removeFromHidden(itemId)
         val now = System.currentTimeMillis()
         val list = _threads.value.toMutableList()
         val idx = list.indexOfFirst { it.itemId == itemId }
@@ -59,6 +77,33 @@ class ChatThreadStore @Inject constructor(
         list.sortByDescending { it.lastTouchedEpochMs }
         _threads.value = list
         writeAll(list)
+    }
+
+    private fun readHiddenItemIds(): Set<String> {
+        val raw = prefs.getString(KEY_HIDDEN_ITEM_IDS, null) ?: return emptySet()
+        return runCatching {
+            val arr = JSONArray(raw)
+            buildSet {
+                for (i in 0 until arr.length()) {
+                    val id = arr.optString(i, "").trim()
+                    if (id.isNotEmpty()) add(id)
+                }
+            }
+        }.getOrDefault(emptySet())
+    }
+
+    private fun saveHiddenItemIds(ids: Set<String>) {
+        val arr = JSONArray()
+        for (id in ids) {
+            if (id.isNotBlank()) arr.put(id)
+        }
+        prefs.edit().putString(KEY_HIDDEN_ITEM_IDS, arr.toString()).apply()
+    }
+
+    private fun removeFromHidden(itemId: String) {
+        val hidden = readHiddenItemIds().toMutableSet()
+        if (!hidden.remove(itemId)) return
+        saveHiddenItemIds(hidden)
     }
 
     private fun readAll(): List<ChatThreadSummary> {

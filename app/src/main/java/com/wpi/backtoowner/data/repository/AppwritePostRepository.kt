@@ -87,61 +87,95 @@ class AppwritePostRepository @Inject constructor(
 
     override suspend fun createPost(newPost: NewPost): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
-        val poster = account.get()
-        val posterLabel = poster.name.trim().ifBlank {
-            poster.email.substringBefore("@").ifBlank { "WPI user" }
-        }
-        val userId = poster.id
-        val permissions = listOf(
-            Permission.read(Role.any()),
-            Permission.update(Role.user(userId)),
-            Permission.delete(Role.user(userId)),
-        )
-        val baseData = buildMap<String, Any> {
-            put(FIELD_TITLE, newPost.title)
-            put(fieldDescription, newPost.description)
-            put(FIELD_IMAGE_URL, newPost.imageUrl)
-            put(FIELD_LATITUDE, newPost.latitude)
-            put(FIELD_LONGITUDE, newPost.longitude)
-            put(FIELD_TYPE, newPost.type.name)
-            newPost.matchPercent?.let { put(FIELD_MATCH_PERCENT, it) }
-        }
-        val withPoster = baseData.toMutableMap().apply {
-            put(FIELD_POSTER_USER_ID, poster.id)
-            put(FIELD_POSTER_DISPLAY_NAME, posterLabel)
-        }
-        try {
-            databases.createDocument(
-                databaseId = requireDb(),
-                collectionId = AppwriteConfig.COLLECTION_POSTS,
-                documentId = ID.unique(),
-                data = withPoster,
-                permissions = permissions,
-            ).id
-        } catch (e: Exception) {
-            if (isUnknownPosterAttributeError(e)) {
+            val poster = account.get()
+            val posterLabel = poster.name.trim().ifBlank {
+                poster.email.substringBefore("@").ifBlank { "WPI user" }
+            }
+            val userId = poster.id
+            val permissions = listOf(
+                Permission.read(Role.any()),
+                Permission.update(Role.user(userId)),
+                Permission.delete(Role.user(userId)),
+            )
+            val baseData = buildMap<String, Any> {
+                put(FIELD_TITLE, newPost.title)
+                put(fieldDescription, newPost.description)
+                put(FIELD_IMAGE_URL, newPost.imageUrl)
+                put(FIELD_LATITUDE, newPost.latitude)
+                put(FIELD_LONGITUDE, newPost.longitude)
+                put(FIELD_TYPE, newPost.type.name)
+                newPost.matchPercent?.let { put(FIELD_MATCH_PERCENT, it) }
+            }
+            val withPoster = baseData.toMutableMap().apply {
+                put(FIELD_POSTER_USER_ID, poster.id)
+                put(FIELD_POSTER_DISPLAY_NAME, posterLabel)
+            }
+            val docId = ID.unique()
+            val payloadForArchive: Map<String, Any> = try {
                 databases.createDocument(
                     databaseId = requireDb(),
                     collectionId = AppwriteConfig.COLLECTION_POSTS,
-                    documentId = ID.unique(),
+                    documentId = docId,
+                    data = withPoster,
+                    permissions = permissions,
+                )
+                withPoster
+            } catch (e: Exception) {
+                if (!isUnknownPosterAttributeError(e)) throw e
+                databases.createDocument(
+                    databaseId = requireDb(),
+                    collectionId = AppwriteConfig.COLLECTION_POSTS,
+                    documentId = docId,
                     data = baseData,
                     permissions = permissions,
-                ).id
-            } else {
+                )
+                baseData
+            }
+            try {
+                databases.createDocument(
+                    databaseId = requireDb(),
+                    collectionId = AppwriteConfig.COLLECTION_POSTS_ARCHIVE,
+                    documentId = docId,
+                    data = payloadForArchive,
+                    permissions = permissions,
+                )
+            } catch (e: Exception) {
+                runCatching {
+                    databases.deleteDocument(
+                        databaseId = requireDb(),
+                        collectionId = AppwriteConfig.COLLECTION_POSTS,
+                        documentId = docId,
+                    )
+                }
                 throw e
             }
-        }
+            docId
         }
     }
 
     override suspend fun deletePost(documentId: String): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
+            // Only remove from live feed; [posts_archive] keeps the historical row for analytics.
             databases.deleteDocument(
                 databaseId = requireDb(),
                 collectionId = AppwriteConfig.COLLECTION_POSTS,
                 documentId = documentId,
             )
             Unit
+        }
+    }
+
+    override suspend fun getArchivedPosts(): Result<List<Post>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = databases.listDocuments(
+                databaseId = requireDb(),
+                collectionId = AppwriteConfig.COLLECTION_POSTS_ARCHIVE,
+                queries = listOf(
+                    Query.orderDesc("\$createdAt"),
+                    Query.limit(500),
+                ),
+            )
+            response.documents.mapNotNull { it.toPost() }
         }
     }
 

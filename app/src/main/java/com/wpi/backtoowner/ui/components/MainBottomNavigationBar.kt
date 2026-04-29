@@ -1,5 +1,10 @@
 package com.wpi.backtoowner.ui.components
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Forum
@@ -7,13 +12,19 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.wpi.backtoowner.navigation.Screen
 import com.wpi.backtoowner.ui.theme.WpiBottomNavDark
@@ -24,6 +35,7 @@ import com.wpi.backtoowner.ui.theme.WpiCrimson
 fun MainBottomNavigationBar(
     navController: NavHostController,
     currentRoute: String?,
+    chatUnreadCount: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     NavigationBar(
@@ -90,7 +102,7 @@ fun MainBottomNavigationBar(
                     restoreState = true
                 }
             },
-            icon = { Icon(Icons.Filled.Forum, contentDescription = "Chats") },
+            icon = { ChatsNavIconWithBadge(chatUnreadCount) },
             label = { Text("Chats") },
             colors = colors,
         )
@@ -107,5 +119,36 @@ fun MainBottomNavigationBar(
             label = { Text("Profile") },
             colors = colors,
         )
+    }
+}
+
+@Composable
+private fun ChatsNavIconWithBadge(unreadCount: Int) {
+    Box {
+        Icon(Icons.Filled.Forum, contentDescription = "Chats")
+        if (unreadCount > 0) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 10.dp, y = (-6).dp)
+                    .size(18.dp),
+                shape = CircleShape,
+                color = Color(0xFFD32F2F),
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 9.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
     }
 }
