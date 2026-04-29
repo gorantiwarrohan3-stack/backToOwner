@@ -1,12 +1,15 @@
 package com.wpi.backtoowner.ui.screens.profile
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wpi.backtoowner.domain.model.AuthUserSummary
 import com.wpi.backtoowner.domain.model.Post
 import com.wpi.backtoowner.domain.repository.AuthRepository
 import com.wpi.backtoowner.domain.repository.PostRepository
+import com.wpi.backtoowner.geofence.GeofencingSupport
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,10 +31,13 @@ sealed interface ProfileUiState {
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val postRepository: PostRepository,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
+    private val _geofencingEnabled = MutableStateFlow(GeofencingSupport.isEnabled(appContext))
+    val geofencingEnabled: StateFlow<Boolean> = _geofencingEnabled.asStateFlow()
 
     init {
         refresh()
@@ -110,5 +116,10 @@ class ProfileViewModel @Inject constructor(
             }
             onResult(res)
         }
+    }
+
+    fun setGeofencingEnabled(enabled: Boolean) {
+        _geofencingEnabled.value = enabled
+        GeofencingSupport.setEnabled(appContext, enabled)
     }
 }

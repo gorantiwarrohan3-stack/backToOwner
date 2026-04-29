@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -41,6 +42,7 @@ fun ChatListScreen(
     viewModel: ChatListViewModel = hiltViewModel(),
 ) {
     val threads by viewModel.threads.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.refreshThreadsFromMessages()
@@ -61,30 +63,36 @@ fun ChatListScreen(
             )
         },
     ) { innerPadding ->
-        if (threads.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "No conversations yet. Open a listing from the feed and tap \"Message Founder\" to start one.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color(0xFFB8B8B8),
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                items(threads, key = { it.itemId }) { row ->
-                    ChatThreadRow(thread = row, onClick = { onOpenThread(row.itemId) })
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = viewModel::refreshThreadsFromMessages,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            if (threads.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "No conversations yet. Open a listing from the feed and tap \"Message Founder\" to start one.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color(0xFFB8B8B8),
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(threads, key = { it.itemId }) { row ->
+                        ChatThreadRow(thread = row, onClick = { onOpenThread(row.itemId) })
+                    }
                 }
             }
         }

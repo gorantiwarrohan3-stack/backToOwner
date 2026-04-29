@@ -13,13 +13,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class FeedFilter { ALL, LOST, FOUND }
 
 @HiltViewModel
 class FeedViewModel @Inject constructor(
-    postRepository: PostRepository,
+    private val postRepository: PostRepository,
 ) : ViewModel() {
 
     private val postsFlow = postRepository.observePosts()
@@ -30,6 +31,8 @@ class FeedViewModel @Inject constructor(
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     val posts: StateFlow<List<Post>> = combine(
         postsFlow,
@@ -64,5 +67,14 @@ class FeedViewModel @Inject constructor(
 
     fun setSearchQuery(value: String) {
         _searchQuery.value = value
+    }
+
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            runCatching { postRepository.getPosts() }
+            _isRefreshing.value = false
+        }
     }
 }

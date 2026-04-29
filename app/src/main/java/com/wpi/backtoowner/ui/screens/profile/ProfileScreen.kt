@@ -84,7 +84,7 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val profileState by viewModel.uiState.collectAsStateWithLifecycle()
-    var geo by remember { mutableStateOf(true) }
+    val geofencingEnabled by viewModel.geofencingEnabled.collectAsStateWithLifecycle()
     var showProfileEditor by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<Post?>(null) }
     var deleteError by remember { mutableStateOf<String?>(null) }
@@ -312,10 +312,14 @@ fun ProfileScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("GeoFencing Alerts:", fontWeight = FontWeight.Bold)
+                Text(
+                    text = "Geofencing alerts",
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF222222),
+                )
                 Switch(
-                    checked = geo,
-                    onCheckedChange = { geo = it },
+                    checked = geofencingEnabled,
+                    onCheckedChange = viewModel::setGeofencingEnabled,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = WpiHeaderMaroon,

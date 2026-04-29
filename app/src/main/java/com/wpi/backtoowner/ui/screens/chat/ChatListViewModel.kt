@@ -11,7 +11,9 @@ import io.appwrite.Query
 import io.appwrite.models.Document
 import io.appwrite.services.Databases
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -26,13 +28,17 @@ class ChatListViewModel @Inject constructor(
 ) : ViewModel() {
 
     val threads: StateFlow<List<ChatThreadSummary>> = chatThreadStore.threads
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     /**
      * Rebuilds the Chats tab from the Appwrite `messages` collection (distinct `itemId`).
      * Local SharedPreferences cache alone can show stale threads after you delete rows in Appwrite.
      */
     fun refreshThreadsFromMessages() {
+        if (_isRefreshing.value) return
         viewModelScope.launch {
+            _isRefreshing.value = true
             withContext(Dispatchers.IO) {
                 runCatching {
                     val response = databases.listDocuments(
@@ -64,6 +70,7 @@ class ChatListViewModel @Inject constructor(
                     chatThreadStore.replaceAll(summaries)
                 }
             }
+            _isRefreshing.value = false
         }
     }
 }

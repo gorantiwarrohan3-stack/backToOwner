@@ -19,9 +19,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
@@ -46,6 +48,7 @@ import com.wpi.backtoowner.ui.theme.WpiOnCrimson
 import com.wpi.backtoowner.ui.util.TimeFormatter
 import com.wpi.backtoowner.ui.util.categoryIconForItemTitle
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     onNavigateToDetail: (String) -> Unit,
@@ -55,6 +58,7 @@ fun FeedScreen(
     val posts by viewModel.posts.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val search by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
     Column(modifier = modifier.fillMaxSize()) {
         Surface(
@@ -118,27 +122,33 @@ fun FeedScreen(
             )
         }
 
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = viewModel::refresh,
+            modifier = Modifier.fillMaxSize(),
         ) {
-            if (posts.isEmpty()) {
-                item {
-                    Text(
-                        text = "No items match your filters.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 24.dp),
-                    )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (posts.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No items match your filters.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 24.dp),
+                        )
+                    }
+                } else {
+                    items(posts, key = { it.id }) { post ->
+                        DashboardPostCard(post = post, onClick = { onNavigateToDetail(post.id) })
+                    }
                 }
-            } else {
-                items(posts, key = { it.id }) { post ->
-                    DashboardPostCard(post = post, onClick = { onNavigateToDetail(post.id) })
-                }
+                item { Spacer(Modifier.height(88.dp)) }
             }
-            item { Spacer(Modifier.height(88.dp)) }
         }
     }
 }
