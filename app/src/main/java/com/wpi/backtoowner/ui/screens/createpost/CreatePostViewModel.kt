@@ -1,6 +1,9 @@
 package com.wpi.backtoowner.ui.screens.createpost
 
+import android.content.Context
 import android.graphics.Bitmap
+import android.location.Address
+import android.location.Geocoder
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -11,7 +14,12 @@ import com.wpi.backtoowner.domain.model.PostType
 import com.wpi.backtoowner.data.local.FoundLocationDraft
 import com.wpi.backtoowner.domain.repository.PostImageRepository
 import com.wpi.backtoowner.domain.repository.PostRepository
+import coil.ImageLoader
+import coil.request.CachePolicy
+import coil.request.ImageRequest
+import com.wpi.backtoowner.domain.usecase.CrossMatchAgainstFeedUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +40,9 @@ class CreatePostViewModel @Inject constructor(
     private val postImageRepository: PostImageRepository,
     private val fusedLocationClient: FusedLocationProviderClient,
     private val foundLocationDraft: FoundLocationDraft,
+    private val crossMatchAgainstFeedUseCase: CrossMatchAgainstFeedUseCase,
+    private val imageLoader: ImageLoader,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     /** Address typed on the Map tab; prepended to Found posts when non-blank. */
@@ -82,12 +93,21 @@ class CreatePostViewModel @Inject constructor(
                     if (loc != null) {
                         _pickedLat.value = loc.latitude
                         _pickedLng.value = loc.longitude
-                        _locationHint.value = String.format(
+                        val coordsText = String.format(
                             Locale.US,
                             "GPS: %.5f, %.5f",
                             loc.latitude,
                             loc.longitude,
                         )
+                        val place = reverseGeocodedPlace(loc.latitude, loc.longitude)
+                        _locationHint.value = if (place != null) {
+                            "$coordsText · $place"
+                        } else {
+                            coordsText
+                        }
+                        if (_manualPlaceNote.value.isBlank() && place != null) {
+                            _manualPlaceNote.value = place
+                        }
                     } else {
                         _locationHint.value = "No recent GPS fix. Move outdoors or try again."
                     }
@@ -202,6 +222,7 @@ class CreatePostViewModel @Inject constructor(
             val matchPercent = _smartTag.value?.let { (it.confidence * 100f).toInt().coerceIn(1, 99) }
             val lat = _pickedLat.value ?: WPI_CAMPUS_LAT
             val lng = _pickedLng.value ?: WPI_CAMPUS_LNG
+            val anchorBitmapSnapshot = bitmap
             val result = postRepository.createPost(
                 NewPost(
                     title = title,
@@ -215,9 +236,30 @@ class CreatePostViewModel @Inject constructor(
             )
             _isPosting.value = false
             result.fold(
-                onSuccess = {
+                onSuccess = { newDocId ->
                     _manualPlaceNote.value = ""
                     if (type == PostType.FOUND) foundLocationDraft.clear()
+                    if (imageUrl.isNotBlank()) {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            runCatching {
+                                imageLoader.execute(
+                                    ImageRequest.Builder(appContext)
+                                        .data(imageUrl)
+                                        .memoryCachePolicy(CachePolicy.ENABLED)
+                                        .diskCachePolicy(CachePolicy.ENABLED)
+                                        .build(),
+                                )
+                            }
+                        }
+                    }
+                    viewModelScope.launch {
+                        crossMatchAgainstFeedUseCase(
+                            newPostDocumentId = newDocId,
+                            anchorTitle = title,
+                            anchorDescription = desc,
+                            anchorImage = anchorBitmapSnapshot,
+                        )
+                    }
                     onSuccess()
                 },
                 onFailure = { e ->
@@ -226,4 +268,23 @@ class CreatePostViewModel @Inject constructor(
             )
         }
     }
+
+    private fun reverseGeocodedPlace(lat: Double, lng: Double): String? {
+        if (!Geocoder.isPresent()) return null
+        val geocoder = Geocoder(appContext, Locale.getDefault())
+        val address = runCatching {
+            @Suppress("DEPRECATION")
+            geocoder.getFromLocation(lat, lng, 1)?.firstOrNull()
+        }.getOrNull() ?: return null
+        return address.toReadablePlaceLabel()
+    }
+}
+
+private fun Address.toReadablePlaceLabel(): String? {
+    val parts = listOfNotNull(
+        featureName?.takeIf { it.isNotBlank() },
+        subLocality?.takeIf { it.isNotBlank() },
+        locality?.takeIf { it.isNotBlank() },
+    ).distinct()
+    return parts.joinToString(", ").takeIf { it.isNotBlank() }
 }

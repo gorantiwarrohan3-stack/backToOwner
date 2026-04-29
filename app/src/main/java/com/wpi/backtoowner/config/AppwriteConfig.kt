@@ -8,6 +8,10 @@ import com.wpi.backtoowner.BuildConfig
  *
  * **Collections:** `posts`, `messages`, `user_profiles` — attributes and permissions per your Appwrite Console setup.
  *
+ * **`feed_matches`** (optional but recommended): `anchorPostId`, `candidatePostId`, `similarity` (int 0–100).
+ *   Lets every signed-in device show the same Gemini “vs latest report” feed badges. Create permissions: **Authenticated**
+ *   may **Create**, **Any** may **Read** (or mirror your posts rules).
+ *
  * **`messages`:** string attributes `itemId`, `senderUserId`, `senderName`, `senderRole`, `body`.
  * Add a **key/index** on `itemId` if list/query by item fails. Collection needs **Create** (and **Read**) for **Users**
  * (or rules you intend). Storage bucket must allow **Read** for image URLs to load in the app.
@@ -24,6 +28,7 @@ object AppwriteConfig {
     const val COLLECTION_POSTS: String = "posts"
     const val COLLECTION_MESSAGES: String = "messages"
     const val COLLECTION_USER_PROFILES: String = "user_profiles"
+    const val COLLECTION_FEED_MATCHES: String = "feed_matches"
 
     val STORAGE_BUCKET_ID: String = BuildConfig.APPWRITE_STORAGE_BUCKET_ID
 }

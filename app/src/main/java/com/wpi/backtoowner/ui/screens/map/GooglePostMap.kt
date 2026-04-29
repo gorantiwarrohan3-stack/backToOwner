@@ -103,6 +103,7 @@ private suspend fun zoomCameraToPosts(cameraPositionState: CameraPositionState, 
 fun GooglePostMap(
     posts: List<Post>,
     cameraPositionState: CameraPositionState,
+    onOpenPost: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -130,8 +131,9 @@ fun GooglePostMap(
             Marker(
                 state = MarkerState(position = latLng),
                 title = post.title,
-                snippet = if (post.type == PostType.LOST) "Lost" else "Found",
+                snippet = if (post.type == PostType.LOST) "Lost · Tap info to open" else "Found · Tap info to open",
                 icon = if (post.type == PostType.LOST) lostIcon else foundIcon,
+                onInfoWindowClick = { onOpenPost(post.id) },
             )
         }
     }

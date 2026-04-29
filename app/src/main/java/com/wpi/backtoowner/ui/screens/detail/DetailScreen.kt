@@ -1,6 +1,7 @@
 package com.wpi.backtoowner.ui.screens.detail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
@@ -15,8 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -48,22 +47,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import com.wpi.backtoowner.ui.components.NetworkImageWithLoader
 import com.wpi.backtoowner.ui.util.categoryIconForItemTitle
 import com.wpi.backtoowner.domain.model.AiMatchCandidate
 import com.wpi.backtoowner.domain.model.Post
 import com.wpi.backtoowner.domain.model.PostType
 import com.wpi.backtoowner.ui.theme.WpiHeaderMaroon
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.ui.text.TextStyle
 import com.wpi.backtoowner.ui.theme.WpiMatchGreen
 import com.wpi.backtoowner.ui.theme.WpiMessageBlue
 import com.wpi.backtoowner.ui.util.TimeFormatter
@@ -75,24 +68,18 @@ fun DetailScreen(
     itemId: String,
     onBack: () -> Unit,
     onMessageFounder: () -> Unit,
+    onOpenSuggestedMatch: (String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: DetailViewModel = hiltViewModel(),
+    viewModel: DetailViewModel = hiltViewModel(key = itemId),
 ) {
     val post by viewModel.post.collectAsStateWithLifecycle()
     val matches by viewModel.matches.collectAsStateWithLifecycle()
+    val suggestedMatchesLoading by viewModel.suggestedMatchesLoading.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
     var showClaimHelp by remember { mutableStateOf(false) }
-    var showAiMatchDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(itemId) {
         viewModel.load(itemId)
-    }
-
-    if (showAiMatchDialog && post != null) {
-        AiMatchDialog(
-            imageUrl = post!!.imageUrl,
-            onDismiss = { showAiMatchDialog = false }
-        )
     }
 
     if (showClaimHelp && post != null) {
@@ -166,15 +153,6 @@ fun DetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     if (listing.type == PostType.FOUND) {
-                        IconButton(
-                            onClick = { showAiMatchDialog = true },
-                            modifier = Modifier
-                                .size(52.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(WpiHeaderMaroon),
-                        ) {
-                            Icon(Icons.Default.AutoAwesome, "AI Match", tint = Color.White)
-                        }
                         Button(
                             onClick = { showClaimHelp = true },
                             modifier = Modifier
@@ -241,6 +219,8 @@ fun DetailScreen(
                         .verticalScroll(rememberScrollState()),
                     post = p,
                     matches = matches,
+                    matchesLoading = suggestedMatchesLoading,
+                    onSuggestedMatchClick = onOpenSuggestedMatch,
                 )
             }
         }
@@ -251,53 +231,47 @@ fun DetailScreen(
 private fun DetailBody(
     post: Post,
     matches: List<AiMatchCandidate>,
+    matchesLoading: Boolean,
+    onSuggestedMatchClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val pagerState = rememberPagerState(pageCount = { 1 })
     Column(
         modifier = modifier
             .background(Color(0xFF0E0E0E))
             .padding(bottom = 8.dp),
     ) {
-        HorizontalPager(
-            state = pagerState,
+        val url = post.imageUrl.takeIf { it.isNotBlank() }
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp),
-        ) { _ ->
-            val url = post.imageUrl.takeIf { it.isNotBlank() }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (url != null) {
-                    AsyncImage(
-                        model = url,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop,
+                .padding(horizontal = 24.dp)
+                .padding(top = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (url != null) {
+                NetworkImageWithLoader(
+                    model = url,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFE0E0E0)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = categoryIconForItemTitle(post.title),
+                        contentDescription = post.title,
+                        modifier = Modifier.size(88.dp),
+                        tint = WpiHeaderMaroon.copy(alpha = 0.9f),
                     )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFE0E0E0)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = categoryIconForItemTitle(post.title),
-                            contentDescription = post.title,
-                            modifier = Modifier.size(88.dp),
-                            tint = WpiHeaderMaroon.copy(alpha = 0.9f),
-                        )
-                    }
                 }
             }
         }
@@ -334,120 +308,46 @@ private fun DetailBody(
             modifier = Modifier.padding(horizontal = 20.dp),
         )
         Text(
-            text = if (matches.isEmpty()) {
-                "No similar listings yet (based on title and description keywords)."
-            } else {
-                "${matches.size} listing(s) with overlapping details:"
+            text = when {
+                matchesLoading -> "Finding similar listings…"
+                matches.isEmpty() -> "No similar listings found yet."
+                else -> "${matches.size} listing(s) with overlapping details:"
             },
             style = MaterialTheme.typography.bodyMedium,
             color = Color(0xFFB8B8B8),
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
         )
-        if (matches.isNotEmpty()) {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-            ) {
-                items(matches, key = { it.label }) { m ->
-                    MatchCard(m)
+        when {
+            matchesLoading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(40.dp),
+                        color = WpiMatchGreen,
+                        trackColor = Color(0xFF2A2A2A),
+                    )
+                }
+            }
+            matches.isNotEmpty() -> {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                ) {
+                    items(matches, key = { it.candidatePostId }) { m ->
+                        MatchCard(
+                            match = m,
+                            onClick = { onSuggestedMatchClick(m.candidatePostId) },
+                        )
+                    }
                 }
             }
         }
         Spacer(Modifier.height(96.dp))
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AiMatchDialog(
-    imageUrl: String,
-    onDismiss: () -> Unit,
-    viewModel: AiMatchViewModel = hiltViewModel()
-) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var description by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.AutoAwesome, null, tint = WpiHeaderMaroon)
-                Spacer(Modifier.width(8.dp))
-                Text("AI Match Verification")
-            }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "Enter the description of the item you lost, and Gemini AI will compare it with the image of this found item.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.DarkGray
-                )
-                
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Your lost item description") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 3,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = WpiHeaderMaroon,
-                        focusedLabelColor = WpiHeaderMaroon,
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        unfocusedBorderColor = Color.Gray,
-                        unfocusedLabelColor = Color.Gray
-                    ),
-                    textStyle = TextStyle(color = Color.Black)
-                )
-
-                when (val state = uiState) {
-                    is AiMatchUiState.Loading -> {
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = WpiHeaderMaroon)
-                        }
-                    }
-                    is AiMatchUiState.Success -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(WpiMatchGreen.copy(alpha = 0.1f))
-                                .padding(8.dp)
-                        ) {
-                            Text(
-                                state.result,
-                                color = Color.Black,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                    is AiMatchUiState.Error -> {
-                        Text(
-                            "Error: ${state.message}",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    else -> {}
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { viewModel.analyzeMatch(description, imageUrl) },
-                enabled = description.isNotBlank() && uiState !is AiMatchUiState.Loading,
-                colors = ButtonDefaults.buttonColors(containerColor = WpiHeaderMaroon)
-            ) {
-                Text("Analyze")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
-        }
-    )
 }
 
 @Composable
@@ -468,23 +368,26 @@ private fun DetailRow(
 }
 
 @Composable
-private fun MatchCard(match: AiMatchCandidate) {
+private fun MatchCard(
+    match: AiMatchCandidate,
+    onClick: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .width(140.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFF1C1C1C))
+            .clickable(onClick = onClick)
             .padding(8.dp),
     ) {
         if (match.imageUrl.isNotBlank()) {
-            AsyncImage(
+            NetworkImageWithLoader(
                 model = match.imageUrl,
                 contentDescription = match.label,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(90.dp)
                     .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop,
             )
         } else {
             Box(

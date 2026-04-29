@@ -31,7 +31,11 @@ class FeedViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val posts: StateFlow<List<Post>> = combine(postsFlow, _filter, _searchQuery) { list, filter, query ->
+    val posts: StateFlow<List<Post>> = combine(
+        postsFlow,
+        _filter,
+        _searchQuery,
+    ) { list, filter, query ->
         list
             .asSequence()
             .filter { post ->
@@ -50,7 +54,7 @@ class FeedViewModel @Inject constructor(
             .toList()
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
+        started = SharingStarted.Eagerly,
         initialValue = emptyList(),
     )
 
