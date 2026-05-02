@@ -77,7 +77,7 @@ class GeminiAiMatchingRepository @Inject constructor(
         ByteArrayOutputStream().apply { bitmap.compress(Bitmap.CompressFormat.JPEG, BUNDLE_JPEG_Q, this) }.toByteArray()
 
     private companion object {
-        const val MODEL_NAME = "gemini-2.5-flash"
+        const val MODEL_NAME = "gemini-2.5-flash-lite"
         const val BUNDLE_JPEG_Q = 82
     }
 }

@@ -7,7 +7,10 @@ import android.graphics.Paint
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toArgb
@@ -46,7 +49,7 @@ private fun markerPositions(posts: List<Post>): List<Pair<Post, LatLng>> {
     }
 }
 
-private fun pinDescriptor(context: Context, colorArgb: Int): BitmapDescriptor {
+private fun pinDescriptor(context: Context, colorArgb: Int): BitmapDescriptor? {
     val d = context.resources.displayMetrics.density
     val size = (28 * d).toInt().coerceAtLeast(24)
     val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -60,7 +63,7 @@ private fun pinDescriptor(context: Context, colorArgb: Int): BitmapDescriptor {
         strokeWidth = 2f * d
     }
     canvas.drawCircle(size / 2f, size / 2f, r, stroke)
-    return BitmapDescriptorFactory.fromBitmap(bmp)
+    return runCatching { BitmapDescriptorFactory.fromBitmap(bmp) }.getOrNull()
 }
 
 private suspend fun zoomCameraToPosts(cameraPositionState: CameraPositionState, posts: List<Post>) {
@@ -108,6 +111,7 @@ fun GooglePostMap(
 ) {
     val context = LocalContext.current
     val markerItems = remember(posts) { markerPositions(posts) }
+    var mapLoaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(posts) {
         zoomCameraToPosts(cameraPositionState, posts)
@@ -116,16 +120,20 @@ fun GooglePostMap(
     GoogleMap(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
         cameraPositionState = cameraPositionState,
+        onMapLoaded = { mapLoaded = true },
         uiSettings = MapUiSettings(
             zoomControlsEnabled = false,
             myLocationButtonEnabled = false,
             compassEnabled = false,
         ),
     ) {
-        // BitmapDescriptorFactory requires Maps SDK to be initialized — must be called
-        // inside the GoogleMap content lambda, never during outer composition.
-        val lostIcon = remember(context) { pinDescriptor(context, WpiLostPin.toArgb()) }
-        val foundIcon = remember(context) { pinDescriptor(context, WpiFoundPin.toArgb()) }
+        // Guard descriptor creation until Maps is loaded; fall back to default markers on failure.
+        val lostIcon = remember(context, mapLoaded) {
+            if (mapLoaded) pinDescriptor(context, WpiLostPin.toArgb()) else null
+        }
+        val foundIcon = remember(context, mapLoaded) {
+            if (mapLoaded) pinDescriptor(context, WpiFoundPin.toArgb()) else null
+        }
 
         markerItems.forEach { (post, latLng) ->
             Marker(

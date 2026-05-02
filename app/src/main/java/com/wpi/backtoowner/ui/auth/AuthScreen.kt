@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -36,6 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -168,6 +171,11 @@ fun AuthScreen(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(if (tab == 1) "WPI Email" else "Email") },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    autoCorrect = false,
+                    imeAction = ImeAction.Next,
+                ),
                 shape = RoundedCornerShape(12.dp),
             )
             OutlinedTextField(
@@ -176,6 +184,11 @@ fun AuthScreen(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Password") },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    autoCorrect = false,
+                    imeAction = if (tab == 1) ImeAction.Next else ImeAction.Done,
+                ),
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -194,6 +207,11 @@ fun AuthScreen(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Confirm Password") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        autoCorrect = false,
+                        imeAction = ImeAction.Done,
+                    ),
                     visualTransformation = if (confirmPasswordVisible) {
                         VisualTransformation.None
                     } else {
